@@ -1,0 +1,12 @@
+**
+!package.json
+!package-lock.json
+!next.config.ts
+!tsconfig.json
+!postcss.config.mjs
+!app/
+!app/**
+# Keep secrets excluded even if placed inside an included directory.
+**/.env*
+**/*.pem
+**/*.key
