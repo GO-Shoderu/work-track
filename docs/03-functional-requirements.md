@@ -81,7 +81,7 @@ The following priority labels are used throughout this document.
 | **FR-030** | Customers shall be able to manually create Candidate records. | CORE |
 | **FR-031** | Candidate profiles shall support profile information such as a LinkedIn URL. | CORE |
 | **FR-032** | Candidates shall only be accessible within the Customer organisation that owns the Candidate record. | CORE |
-| **FR-033** | Recruiters may upload a Candidate CV. | WOW |
+| **FR-033** | Recruiters shall be able to securely upload a Candidate CV in PDF format for Candidate assessment. | CORE |
 | **FR-034** | Public applicants may submit Candidate information through a public Job page. | WOW |
 | **FR-035** | Candidate information may include a name, email address, phone number, LinkedIn URL, and CV. | SUPPORTING |
 | **FR-036** | A Candidate shall belong to a Customer organisation. | ASSUMPTION |
@@ -205,10 +205,10 @@ The purpose of the feature is to assist recruiters by comparing information cont
 
 | ID | Requirement | Priority |
 |---|---|---|
-| **FR-100** | Recruiters may attach a CV to a Candidate profile. | WOW |
-| **FR-101** | A Candidate CV shall remain associated with the relevant Candidate. | WOW |
-| **FR-102** | Authorised users may access a Candidate's stored CV. | WOW |
-| **FR-103** | Unauthorised users shall not be able to access Candidate CV files. | WOW |
+| **FR-100** | Recruiters shall be able to attach a PDF CV to a Candidate profile. | CORE |
+| **FR-101** | A Candidate CV shall remain associated with the relevant Candidate. | CORE |
+| **FR-102** | Authorised users shall be able to access a Candidate's stored CV. | CORE |
+| **FR-103** | Unauthorised users shall not be able to access Candidate CV files. | CORE |
 
 ---
 

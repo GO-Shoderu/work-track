@@ -181,7 +181,8 @@ The production architecture is:
 - Supabase Storage
 - Zod
 - Tailwind CSS
-- Vercel
+- Hostinger VPS
+- Docker
 
 Do not introduce NestJS or another backend framework without explicit approval.
 

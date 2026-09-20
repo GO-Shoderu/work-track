@@ -379,6 +379,19 @@ AI shall not autonomously make final hiring decisions.
 
 ---
 
+## CORE-18 — Minimal Candidate CV Upload
+
+Work Track shall support a minimal secure Candidate CV upload capability required by the Core AI-assisted assessment workflow.
+
+For the P0 implementation:
+
+- accepted format: PDF;
+- maximum file size: 5 MB;
+- storage: private Supabase Storage;
+- access: authorised users only.
+
+Advanced document-management functionality remains outside the Core scope.
+
 # 10. P1 — WOW Features
 
 These features are agreed enhancements intended to strengthen the product beyond the minimum required implementation.
@@ -439,14 +452,6 @@ Application
     +
 Stage = Applied
 ```
-
----
-
-## WOW-05 — Candidate CV Upload
-
-Recruiters may securely upload Candidate CVs.
-
-Candidate CVs shall use private storage and only be accessible to authorised users.
 
 ---
 
