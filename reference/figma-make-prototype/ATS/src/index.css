@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-sidebar: #0D0F14;
+  --color-sidebar-hover: #181b22;
+  --color-workspace: #F1F2F6;
+  --color-lime: #AADE00;
+  --color-lime-hover: #95C700;
+  --color-lime-subtle: #E8F9A0;
+
+  --color-stage-applied: #3B82F6;
+  --color-stage-screening: #8B5CF6;
+  --color-stage-interview: #F59E0B;
+  --color-stage-offer: #F97316;
+  --color-stage-hired: #22C55E;
+  --color-stage-rejected: #9CA3AF;
+
+  --color-surface: #FFFFFF;
+  --color-border: #E4E6EA;
+  --color-muted: #6B7280;
+  --color-subtle: #F9FAFB;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #F1F2F6;
+  color: #111827;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+.kanban-board::-webkit-scrollbar { height: 6px; }
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in-right { animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in { animation: fade-in 0.18s ease forwards; }
+.animate-slide-up { animation: slide-up 0.2s ease forwards; }

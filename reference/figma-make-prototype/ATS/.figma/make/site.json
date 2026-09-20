@@ -1,0 +1,10 @@
+{
+  "description": "Manage recruitment workflows efficiently by enabling platform owners, admins, and recruiters to oversee jobs, candidates, pipelines, and notifications in one place.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

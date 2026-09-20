@@ -1,0 +1,741 @@
+You are helping me design the UX/UI for a production-oriented Applicant Tracking System (ATS).
+
+IMPORTANT:
+For this first step, DO NOT generate or implement the application yet.
+
+First analyse the requirements and visual reference I have attached and return:
+
+1. your understanding of the product;
+2. the user roles;
+3. the proposed information architecture;
+4. the screens you believe are required;
+5. the reusable UI components required;
+6. the navigation structure for each user role;
+7. the primary user journeys;
+8. how you would adapt the attached visual reference to this ATS;
+9. any UX concerns, missing states, or inconsistencies you notice.
+
+Wait for my approval before building the UI.
+
+--------------------------------------------------
+PRODUCT
+--------------------------------------------------
+
+The product is a lightweight multi-tenant Applicant Tracking System.
+
+The platform allows organisations to manage jobs, candidates and recruitment applications through a visual recruitment pipeline.
+
+The central domain relationship is:
+
+Candidate + Job = Application
+
+A Candidate represents a person.
+
+A Job represents a role an organisation is recruiting for.
+
+An Application represents a Candidate being considered for a specific Job.
+
+An Application has a recruitment stage.
+
+Default stages:
+
+- Applied
+- Screening
+- Interview
+- Offer
+- Hired
+- Rejected
+
+--------------------------------------------------
+VISUAL DIRECTION
+--------------------------------------------------
+
+Use the attached image as the primary visual reference.
+
+DO NOT copy the brand name, logo, people, content or exact interface.
+
+Instead, derive the visual language from it.
+
+I particularly want:
+
+- dark near-black left navigation;
+- light/off-white main workspace;
+- strong electric/lime green accent;
+- generous rounded corners;
+- subtle grey borders;
+- restrained shadows;
+- clean typography;
+- compact but readable information density;
+- generous whitespace;
+- contextual multi-column layouts;
+- soft neutral surfaces;
+- minimal visual noise;
+- small status indicators;
+- avatars where appropriate;
+- strong selected/navigation states;
+- polished SaaS feel;
+- modern European/startup aesthetic;
+- professional rather than playful;
+- data-dense without feeling overwhelming.
+
+Suggested design direction:
+
+Background:
+soft grey/off-white
+
+Sidebar:
+near black / charcoal
+
+Primary accent:
+bright lime green
+
+Typography:
+dark charcoal
+
+Secondary text:
+soft neutral grey
+
+Cards:
+white with very subtle borders
+
+Use colour primarily for:
+- active states;
+- status;
+- important actions;
+- recruitment stage indicators.
+
+Do NOT overuse gradients.
+
+Do NOT make the application look like a generic AI dashboard.
+
+Do NOT use excessive glassmorphism.
+
+The interface should feel like a serious recruiting workspace.
+
+--------------------------------------------------
+USER ROLES
+--------------------------------------------------
+
+ROLE 1 — PLATFORM OWNER / PRIMARY ADMIN
+
+This is the highest-level platform administrator.
+
+Capabilities:
+
+- view a summary of the entire ATS;
+- view all customer organisations;
+- review prospective customer access requests;
+- approve or reject customer access requests;
+- create customer organisations;
+- create customer accounts;
+- create other Admin accounts;
+- view and manage Admins;
+- assign Admins to customers;
+- configure or view delegated Admin privileges;
+- operate within a Customer organisation on their behalf;
+- review important administrative notifications;
+- review sensitive administrative activity;
+- review requests for high-risk operations where applicable;
+- disable/archive accounts where appropriate;
+- log out.
+
+The Platform Owner should always clearly understand when they are operating at platform level versus acting inside a Customer organisation.
+
+--------------------------------------------------
+
+ROLE 2 — ADMIN
+
+Admins have delegated administrative capabilities.
+
+An Admin may:
+
+- see Customers assigned to them;
+- open an assigned Customer;
+- perform permitted recruitment operations on behalf of that Customer;
+- see only administrative capabilities granted to them;
+- receive relevant administrative notifications;
+- log out.
+
+The UI should support the idea of granular permissions without requiring an overly complex interface.
+
+Examples of future/delegated permissions could include:
+
+- manage customers;
+- create customer users;
+- manage jobs;
+- manage candidates;
+- manage other Admins;
+- review onboarding requests;
+- access audit history.
+
+The design should clearly differentiate between:
+
+Platform Owner
+and
+Delegated Admin
+
+without making the interface unnecessarily complicated.
+
+--------------------------------------------------
+
+ROLE 3 — CUSTOMER / RECRUITER
+
+A Customer belongs to one organisation.
+
+Primary navigation:
+
+- Overview
+- Jobs
+- Candidates
+- Pipeline
+- Notifications, if useful
+- Settings, if useful
+- Logout
+
+Capabilities:
+
+- create Jobs;
+- view Jobs;
+- edit Jobs;
+- add Candidates manually;
+- associate Candidates with Jobs;
+- upload Candidate CVs;
+- view Candidate profiles;
+- access Candidate LinkedIn links;
+- view recruitment pipeline;
+- move Applications between recruitment stages;
+- search Candidates by name;
+- filter Pipeline by Job;
+- run AI-assisted CV assessments;
+- view AI assessment results.
+
+A Customer must never see another organisation's data.
+
+--------------------------------------------------
+
+ROLE 4 — PROSPECTIVE CUSTOMER
+
+This person does not yet have an account.
+
+They may:
+
+- visit a public landing/request-access page;
+- express interest in using the ATS;
+- provide organisation information;
+- provide contact information;
+- submit the request for Admin review.
+
+Possible fields:
+
+- company name;
+- contact name;
+- business email;
+- phone;
+- website;
+- approximate hiring needs;
+- preferred contact method;
+- notes.
+
+--------------------------------------------------
+
+ROLE 5 — CANDIDATE
+
+Candidates do NOT require ATS accounts.
+
+Candidates are primarily records managed by Recruiters.
+
+As an enhancement, a Candidate may visit a public Job link and submit:
+
+- name;
+- email;
+- phone;
+- LinkedIn URL;
+- CV.
+
+Successful submission creates:
+
+Candidate
++
+Application
++
+Stage = Applied
+
+--------------------------------------------------
+CORE ATS NAVIGATION
+--------------------------------------------------
+
+PLATFORM OWNER
+
+Overview
+Customers
+Review
+Admins
+Notifications / Approvals
+Audit / Activity, if appropriate
+Settings
+Logout
+
+
+ADMIN
+
+Overview
+Assigned Customers
+Notifications
+Available delegated administrative capabilities
+Settings
+Logout
+
+
+CUSTOMER
+
+Overview
+Jobs
+Candidates
+Pipeline
+Notifications, if appropriate
+Settings
+Logout
+
+--------------------------------------------------
+REQUIRED SCREENS
+--------------------------------------------------
+
+Design a coherent UX for at least the following areas.
+
+AUTHENTICATION
+
+1. Login
+
+Keep login simple.
+There is no public Customer registration.
+
+--------------------------------------------------
+
+PLATFORM OWNER / ADMIN
+
+2. Platform Overview
+
+Possible information:
+
+- total Customers;
+- active Customers;
+- open Jobs;
+- Candidates;
+- Applications;
+- pending Customer requests;
+- Admin activity;
+- recent activity.
+
+Avoid creating meaningless vanity statistics.
+
+3. Customers
+
+Customer organisation list.
+
+Consider showing:
+
+- organisation name;
+- primary contact;
+- number of open Jobs;
+- Candidate count;
+- assigned Admin;
+- status;
+- last activity.
+
+4. Customer Detail
+
+Show organisation information and relevant recruitment activity.
+
+Provide a clear action:
+
+"Manage as Customer"
+
+or equivalent.
+
+This should switch the Admin into that organisation context.
+
+5. Customer Access Review
+
+Queue of prospective Customer requests.
+
+Possible states:
+
+- Pending
+- Needs Information
+- Approved
+- Rejected
+
+Selecting a request should expose the submitted information in a clean detail panel.
+
+6. Admin Management
+
+List Admin accounts.
+
+Show relevant information such as:
+
+- name;
+- email;
+- role;
+- assigned Customers;
+- permissions;
+- status;
+- recent activity.
+
+Support creating another Admin.
+
+7. Admin Detail / Permissions
+
+Show:
+
+- Admin identity;
+- Customers assigned;
+- permissions/capabilities;
+- status;
+- recent sensitive actions.
+
+Do not make this look like an unnecessarily complex enterprise IAM product.
+
+8. Administrative Notifications / Approvals
+
+Use for important events such as:
+
+- pending onboarding reviews;
+- actions requiring attention;
+- unusual administrative events;
+- approval requests if high-risk workflows are implemented.
+
+--------------------------------------------------
+CUSTOMER / RECRUITER
+--------------------------------------------------
+
+9. Customer Overview
+
+This should be useful rather than decorative.
+
+Possible content:
+
+- active Jobs;
+- Candidates;
+- Interviews / Candidates currently in Interview;
+- Offers;
+- Hires;
+- recruitment activity;
+- recently updated Applications.
+
+10. Jobs
+
+Show Job listings.
+
+Consider compact cards or a clean table.
+
+Possible information:
+
+- Job title;
+- location;
+- employment type;
+- status;
+- Candidate count;
+- created date;
+- public/private status if public Job links are implemented.
+
+Include a prominent:
+
++ New Job
+
+action.
+
+11. Create / Edit Job
+
+Possible fields:
+
+- Job title;
+- department;
+- location;
+- employment type;
+- description;
+- requirements;
+- status.
+
+If public Job links are implemented:
+
+- publish toggle;
+- shareable Job link.
+
+12. Candidates
+
+Candidate directory.
+
+Support:
+
+- search;
+- filtering;
+- compact Candidate rows/cards;
+- Candidate name;
+- current role;
+- LinkedIn;
+- active Applications;
+- recruitment stage where appropriate;
+- date added.
+
+Include:
+
++ Add Candidate
+
+13. Add Candidate
+
+Possible information:
+
+- full name;
+- email;
+- phone;
+- LinkedIn URL;
+- current role;
+- location;
+- CV;
+- Job association.
+
+14. Candidate Detail
+
+Use the attached reference as inspiration for a contextual multi-column Candidate workspace.
+
+A Candidate detail experience should include:
+
+- profile header;
+- contact information;
+- LinkedIn link;
+- CV;
+- Applications;
+- recruitment stages;
+- activity;
+- notes if appropriate;
+- AI Assessment.
+
+Strongly consider using a right-side details panel or drawer when opened from the Pipeline.
+
+15. Pipeline / Kanban
+
+THIS IS THE PRIMARY / HERO SCREEN OF THE PRODUCT.
+
+It must feel excellent.
+
+Provide:
+
+- compact Kanban layout;
+- recruitment stages;
+- Candidate cards;
+- Job filter;
+- Candidate-name search;
+- stage counts;
+- drag-and-drop interaction;
+- responsive handling of many Candidates;
+- clear selected Candidate behaviour.
+
+Stages:
+
+Applied
+Screening
+Interview
+Offer
+Hired
+
+Rejected may appear as:
+- a separate state;
+- an archived/disqualified state;
+- or its own column if appropriate.
+
+Candidate cards should remain compact.
+
+Potential card information:
+
+- Candidate name;
+- avatar/initials;
+- Job title when viewing All Jobs;
+- LinkedIn indicator;
+- time in stage;
+- AI score only when assessment exists;
+- contextual menu.
+
+Do not overload Candidate cards.
+
+16. Candidate Detail Drawer
+
+When a Candidate is selected from the Pipeline, expose details without unnecessarily removing the Recruiter from the Pipeline context.
+
+Possible sections:
+
+Profile
+Applications
+CV
+AI Assessment
+Activity
+Notes
+
+--------------------------------------------------
+PUBLIC / WOW EXPERIENCES
+--------------------------------------------------
+
+17. Request Access
+
+Professional public form for prospective Customers.
+
+18. Public Job Page
+
+Shareable Job page containing:
+
+- organisation;
+- Job title;
+- location;
+- employment type;
+- description;
+- requirements;
+- Apply action.
+
+19. Public Job Application
+
+Simple application form containing:
+
+- name;
+- email;
+- phone;
+- LinkedIn URL;
+- CV upload.
+
+Do not require account creation.
+
+--------------------------------------------------
+AI ASSESSMENT UX
+--------------------------------------------------
+
+Candidate AI assessment should NOT simply present a mysterious score.
+
+Where possible show:
+
+AI Match
+82%
+
+Strengths
+- relevant backend experience
+- PostgreSQL
+- AWS
+
+Potential Gaps
+- limited evidence of Kubernetes
+
+Supporting Evidence
+- relevant excerpts or clearly attributed CV evidence
+
+Summary
+short recruiter-oriented analysis
+
+Clearly communicate:
+
+"AI-assisted assessment. Human recruiter judgement is required."
+
+The interface should treat AI as decision support rather than an autonomous hiring authority.
+
+--------------------------------------------------
+IMPORTANT UX STATES
+--------------------------------------------------
+
+Design appropriate states for:
+
+- empty Jobs;
+- empty Candidates;
+- empty Pipeline;
+- loading;
+- errors;
+- no search results;
+- disabled account;
+- archived Customer;
+- Candidate without CV;
+- AI assessment not yet run;
+- AI assessment processing;
+- AI assessment failure;
+- pending Customer review.
+
+--------------------------------------------------
+RESPONSIVE DESIGN
+--------------------------------------------------
+
+Design desktop-first.
+
+Primary desktop target:
+approximately 1440px wide.
+
+Also consider graceful behaviour for:
+
+- laptop widths;
+- tablet widths;
+- narrow windows.
+
+The Kanban may use horizontal scrolling when necessary.
+
+Do not force a mobile-style layout onto a data-heavy desktop ATS.
+
+--------------------------------------------------
+DESIGN SYSTEM
+--------------------------------------------------
+
+Propose reusable styles for:
+
+Typography:
+- page title
+- section heading
+- body
+- labels
+- metadata
+
+Components:
+- sidebar items
+- buttons
+- search fields
+- selects
+- badges
+- avatars
+- status indicators
+- cards
+- tables
+- Kanban columns
+- Candidate cards
+- modals
+- drawers
+- toast notifications
+- tabs
+- empty states
+- confirmation dialogs
+
+Use consistent spacing and radius throughout the product.
+
+--------------------------------------------------
+SECURITY-AWARE UX
+--------------------------------------------------
+
+The interface should support secure behaviour.
+
+Examples:
+
+- Admin organisation context must be obvious.
+- High-risk Admin actions should use confirmation.
+- Never make destructive actions visually equivalent to ordinary actions.
+- Prefer Disable / Archive over Delete where appropriate.
+- Clearly communicate role and permissions.
+- Never expose sensitive security implementation details to end users.
+
+--------------------------------------------------
+FINAL INSTRUCTION FOR THIS STEP
+--------------------------------------------------
+
+Do NOT implement the screens yet.
+
+First return:
+
+1. role/navigation map;
+2. screen inventory;
+3. primary user journeys;
+4. proposed component system;
+5. visual interpretation of the reference image;
+6. recommended desktop layout;
+7. UX concerns or assumptions;
+8. any screen you think should be added, removed or combined.
+
+Wait for approval before generating the prototype.
