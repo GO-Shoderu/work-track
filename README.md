@@ -2,7 +2,12 @@
 
 Coding challenge for Devotion Ventures.
 
-Status: Milestone 1 — production foundation. Recruitment features are not implemented yet.
+Status: Milestone 2 — local identity/authentication implementation, awaiting SQL review.
+The managed Supabase project is not connected and no migration has been applied.
+Recruitment features and account provisioning are not implemented yet.
+
+See [the complete Milestone 2 review and bootstrap runbook](docs/07-identity-foundation.md)
+and [the SQL migration](supabase/migrations/20260921000100_identity_foundation.sql).
 
 Deadline: 22 September 2026
 
@@ -13,7 +18,9 @@ The material in `reference/` is a visual/interaction reference only.
 
 Use Node.js 24 (the Docker build uses 24.18.0) and npm. Direct dependencies
 are pinned in `package.json`; `package-lock.json` records the dependency tree.
-No environment variables or credentials are needed for this milestone.
+No environment variables or credentials are needed to build or inspect disconnected
+mode. `application/.env.example` contains placeholders only. Do not configure the
+managed project or execute SQL before the migration review is approved.
 
 ```bash
 cd application
@@ -21,9 +28,10 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. The page is deliberately minimal and uses the
-approved Work Track colour tokens and system-font fallback. No remote font
-request is required. `/api/health` returns only `{"status":"ok"}`; it checks
+Open http://127.0.0.1:3000. The entry redirects to login. Without configuration,
+sign-in is unavailable and protected pages fail closed. The UI uses the approved
+Work Track colour tokens and system-font fallback. No remote font request is
+required. `/api/health` returns only `{"status":"ok"}`; it checks
 application liveness, not database or external-service readiness.
 
 ## Verification
@@ -33,6 +41,7 @@ Run from `application/`:
 ```bash
 npm run lint
 npm run typecheck
+npm test
 npm run build
 npm audit
 docker compose config --quiet
@@ -72,12 +81,14 @@ interfaces **inside the container** so Docker can forward that loopback port.
 No production secrets should be placed in an image or committed to Git.
 Docker build dependencies require registry access on an uncached build.
 
-The intended live deployment is Docker on the Hostinger VPS, behind an HTTPS
-reverse proxy, with Supabase remaining a managed cloud backend. VPS access,
-DNS, HTTPS/reverse-proxy configuration and live deployment are separate work;
-this milestone does not configure them. A future reverse proxy may require
-an explicitly reviewed container-network configuration.
+The confirmed live deployment is https://worktrack.go-sh.dev, Docker container
+`work-track-web` on the `proxy` network on Hostinger VPS, behind Nginx Proxy Manager.
+The managed Supabase Cloud project **Work Track**, Central EU (Frankfurt), is the
+approved development/demo backend. No local Supabase is used. VPS, DNS, reverse
+proxy and network configuration are frozen during Milestone 2.
 
-Authentication, authorization, Supabase, recruitment workflows, CV handling
-and AI assessment are deferred. The public foundation page contains no
-private data and does not simulate these capabilities.
+The local Compose commands above concern local application verification only;
+they must not be run against the live deployment as part of this milestone.
+The Docker source allowlist includes the new authentication modules. The complete
+container build and disconnected smoke tests pass without project configuration.
+Live authentication/RLS acceptance remains pending approval to apply SQL and connect.

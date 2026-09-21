@@ -26,3 +26,16 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+:focus-visible {
+  outline: 2px solid #4d6600;
+  outline-offset: 3px;
+}
+
+aside :focus-visible {
+  outline-color: #aade00;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}

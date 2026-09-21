@@ -6,6 +6,11 @@
 !postcss.config.mjs
 !app/
 !app/**
+!lib/
+!lib/**
+!components/
+!components/**
+!proxy.ts
 # Keep secrets excluded even if placed inside an included directory.
 **/.env*
 **/*.pem
