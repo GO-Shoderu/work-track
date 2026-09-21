@@ -11,3 +11,7 @@ next-env.d.ts
 *.pem
 *.key
 .DS_Store
+
+# Next.js generated coding-agent guidance
+/application/AGENTS.md
+/application/CLAUDE.md
