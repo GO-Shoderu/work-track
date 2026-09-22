@@ -31,6 +31,16 @@ export function requireEnvironment() {
   return environment;
 }
 
+// Provisioning configuration is separate: missing admin configuration must not
+// prevent existing users from signing in. Never return this object to a client.
+export function requireAdminEnvironment() {
+  const environment = requireEnvironment();
+  const secret = z.string().regex(/^sb_secret_[A-Za-z0-9_-]+$/)
+    .safeParse(process.env.SUPABASE_SECRET_KEY);
+  if (!secret.success) throw new Error("Account provisioning is unavailable.");
+  return { ...environment, SUPABASE_SECRET_KEY: secret.data };
+}
+
 export function sessionCookieOptions(appUrl: string) {
   return { name: "worktrack-auth", httpOnly: true, secure: new URL(appUrl).protocol === "https:", sameSite: "lax" as const, path: "/" };
 }
