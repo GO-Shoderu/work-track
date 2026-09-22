@@ -14,6 +14,16 @@ function roleLabel(context: string) {
   return context;
 }
 
+function isRecruitmentWorkspace(context: string) {
+  return context === "Customer workspace" || context.startsWith("Managing Customer Workspace:");
+}
+
+const recruitmentLinks = [
+  ["Pipeline", "#pipeline"],
+  ["Jobs", "#jobs"],
+  ["Candidates", "#candidates"],
+] as const;
+
 export function WorkspaceShell({
   title,
   name,
@@ -26,6 +36,7 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   const href = homeHref(context);
+  const recruitment = isRecruitmentWorkspace(context);
 
   return (
     <div className="min-h-screen bg-workspace lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -41,7 +52,7 @@ export function WorkspaceShell({
           <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500">
             Workspace
           </p>
-          <nav className="mt-3">
+          <nav className="mt-3 space-y-1">
             <Link
               href={href}
               className="flex items-center gap-3 rounded-xl bg-white/[0.08] px-3 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.12]"
@@ -53,6 +64,16 @@ export function WorkspaceShell({
               </span>
               Overview
             </Link>
+            {recruitment && recruitmentLinks.map(([label, target]) => (
+              <Link
+                key={label}
+                href={target}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-400 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                <span className="ml-2 size-1.5 rounded-full bg-gray-600" />
+                {label}
+              </Link>
+            ))}
           </nav>
         </div>
 
@@ -92,6 +113,15 @@ export function WorkspaceShell({
               <LogoutButton />
             </div>
           </header>
+          {recruitment && (
+            <nav className="-mt-3 mb-6 flex gap-2 overflow-x-auto pb-2 lg:hidden">
+              {recruitmentLinks.map(([label, target]) => (
+                <Link key={label} href={target} className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold">
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          )}
           {children}
         </div>
       </main>
