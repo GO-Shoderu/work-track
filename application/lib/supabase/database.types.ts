@@ -13,6 +13,8 @@ export type Application = { id: string; organisation_id: string; candidate_id: s
 export type Database = {
   public: {
     Tables: {
+      candidate_assessments: { Row: { application_id: string; organisation_id: string; cv_object_id: string; result: unknown; assessed_at: string }; Insert: never; Update: never; Relationships: [] };
+      candidate_cvs: { Row: { candidate_id: string; organisation_id: string; object_id: string; storage_path: string; byte_size: number; updated_at: string }; Insert: { candidate_id: string; organisation_id: string; object_id: string; byte_size: number }; Update: { object_id: string; byte_size: number }; Relationships: [] };
       jobs: { Row: Job; Insert: Pick<Job, "organisation_id" | "title"> & Partial<Pick<Job, "description">>; Update: never; Relationships: [] };
       candidates: { Row: Candidate; Insert: Pick<Candidate, "organisation_id" | "full_name"> & Partial<Pick<Candidate, "email" | "phone" | "linkedin_url">>; Update: never; Relationships: [] };
       applications: { Row: Application; Insert: Pick<Application, "organisation_id" | "candidate_id" | "job_id">; Update: Pick<Application, "stage">; Relationships: [
@@ -25,6 +27,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      save_candidate_assessment: { Args: { target_application_id: string; target_cv_object_id: string; validated_result: unknown }; Returns: string };
       provision_customer_organisation: { Args: { target_auth_user_id: string; organisation_name: string; customer_full_name: string }; Returns: string };
       provision_customer_for_organisation: { Args: { target_auth_user_id: string; organisation_id: string; customer_full_name: string }; Returns: string };
       provision_admin: { Args: { target_auth_user_id: string; admin_full_name: string }; Returns: string };
