@@ -1,5 +1,9 @@
+import { readAssessmentResult } from "../../lib/assessment/context";
+import { inspectCurrentCv } from "../../lib/cv/storage";
 import { listCandidates, listJobs, listPipeline } from "../../lib/recruitment/queries";
 import type { ApplicationStage } from "../../lib/supabase/database.types";
+import { CandidateFilter } from "./candidate-filter";
+import { CandidateCvAssessment } from "./candidate-cv-assessment";
 import { PipelineBoard } from "./pipeline-board";
 import { CreateApplicationForm, CreateCandidateForm, CreateJobForm } from "./recruitment-forms";
 
@@ -27,6 +31,7 @@ export async function RecruitmentWorkspace({
   view?: RecruitmentView;
 }) {
   const scope = organisationId ? { organisationId, limit: 100 } : { limit: 100 };
+  const actionScope = organisationId ? { organisationId } : {};
   const [jobs, candidates, rawPipeline] = await Promise.all([
     listJobs(scope),
     listCandidates(scope),
@@ -37,8 +42,18 @@ export async function RecruitmentWorkspace({
     const candidate = firstRelation(row.candidate);
     const job = firstRelation(row.job);
     if (!candidate || !job) return [];
-    return [{ id: row.id, candidateName: candidate.full_name, jobId: row.job_id, jobTitle: job.title, stage: row.stage }];
+    return [{ id: row.id, candidateId: row.candidate_id, candidateName: candidate.full_name, jobId: row.job_id, jobTitle: job.title, stage: row.stage }];
   });
+
+  const needsCandidateDetails = view === "candidates";
+  const cvEntries = needsCandidateDetails
+    ? await Promise.all(candidates.map(async (candidate) => [candidate.id, await inspectCurrentCv({ ...actionScope, candidateId: candidate.id })] as const))
+    : [];
+  const assessmentEntries = needsCandidateDetails
+    ? await Promise.all(pipeline.map(async (application) => [application.id, await readAssessmentResult({ ...actionScope, applicationId: application.id })] as const))
+    : [];
+  const cvs = new Map(cvEntries);
+  const assessments = new Map(assessmentEntries);
 
   const representedJobs = new Set(pipeline.map((item) => item.jobId)).size;
 
@@ -103,26 +118,72 @@ export async function RecruitmentWorkspace({
         <div className="mt-1 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Talent pool</h2>
-            <p className="mt-1 text-sm text-muted">Maintain candidate profiles and connect them to open roles.</p>
+            <p className="mt-1 text-sm text-muted">Maintain candidate profiles, CVs and job-fit assessments.</p>
           </div>
           <CreateCandidateForm organisationId={organisationId} />
         </div>
       </div>
+      {needsCandidateDetails && (
+        <div className="border-b border-border bg-[#f8f9fb] px-5 py-4 sm:px-6">
+          <CandidateFilter targetId="candidate-directory" count={candidates.length} />
+        </div>
+      )}
       {candidates.length ? (
-        <ul className="divide-y divide-border">
-          {candidates.map((candidate) => (
-            <li key={candidate.id} className="flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{candidate.full_name}</p>
-                <p className="mt-1 truncate text-xs text-muted">{candidate.email || candidate.phone || "No contact details"}</p>
-              </div>
-              {candidate.linkedin_url && (
-                <a href={candidate.linkedin_url} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-semibold underline decoration-border underline-offset-4">
-                  LinkedIn ↗
-                </a>
-              )}
-            </li>
-          ))}
+        <ul
+          id="candidate-directory"
+          className={needsCandidateDetails ? "space-y-4 bg-[#f8f9fb] p-4 sm:p-5" : "divide-y divide-border"}
+        >
+          {candidates.map((candidate) => {
+            const applications = pipeline
+              .filter((application) => application.candidateId === candidate.id)
+              .map((application) => ({
+                id: application.id,
+                jobTitle: application.jobTitle,
+                stage: application.stage,
+                assessment: assessments.get(application.id) ?? null,
+              }));
+            return (
+              <li
+                key={candidate.id}
+                data-candidate-search={`${candidate.full_name} ${candidate.email ?? ""}`.toLowerCase()}
+                className={
+                  needsCandidateDetails
+                    ? "rounded-2xl border border-border bg-white p-5 shadow-[0_1px_3px_rgb(13_15_20/0.05)] sm:p-6"
+                    : "px-5 py-5 sm:px-6"
+                }
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sidebar text-sm font-semibold text-lime">
+                      {candidate.full_name.trim().charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold tracking-[-0.01em]">{candidate.full_name}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted">{candidate.email || candidate.phone || "No contact details"}</p>
+                      {needsCandidateDetails && (
+                        <p className="mt-1 text-[11px] font-medium text-muted">
+                          {applications.length} application{applications.length === 1 ? "" : "s"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {candidate.linkedin_url && (
+                    <a href={candidate.linkedin_url} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-semibold underline decoration-border underline-offset-4">
+                      LinkedIn ↗
+                    </a>
+                  )}
+                </div>
+                {needsCandidateDetails && (
+                  <CandidateCvAssessment
+                    organisationId={organisationId}
+                    candidateId={candidate.id}
+                    cv={cvs.get(candidate.id) ?? null}
+                    applications={applications}
+                  />
+                )}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="px-6 py-12 text-center text-sm text-muted">No candidates yet. Add the first candidate above.</p>
