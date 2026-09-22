@@ -10,17 +10,19 @@ export const dynamic = "force-dynamic";
 
 export default async function ManagedWorkspacePage({ params }: { params: Promise<{ organisationId: string }> }) {
   const identity = await requireIdentity();
-  // Customers never adopt a URL-selected organisation, even their own.
   if (identity.profile.role === "customer") redirect("/workspace");
 
   const { organisationId } = await params;
   const { profile, organisation } = await requireOrganisationAccess(organisationId);
+  const workspaceBasePath = `/workspace/${organisation.id}`;
 
   return (
     <WorkspaceShell
       title={organisation.name}
       name={profile.full_name}
       context={`Managing Customer Workspace: ${organisation.name}`}
+      workspaceBasePath={workspaceBasePath}
+      currentSection="overview"
     >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d8ef78] bg-lime-subtle px-3 py-1.5 text-xs font-semibold text-[#405300]">
@@ -34,7 +36,7 @@ export default async function ManagedWorkspacePage({ params }: { params: Promise
           Return to administration
         </Link>
       </div>
-      <RecruitmentWorkspace organisationId={organisation.id} />
+      <RecruitmentWorkspace organisationId={organisation.id} view="overview" />
     </WorkspaceShell>
   );
 }

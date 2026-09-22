@@ -10,8 +10,14 @@ export default async function WorkspacePage() {
   const { profile, organisation } = await requireOrganisationAccess();
 
   return (
-    <WorkspaceShell title={organisation.name} name={profile.full_name} context="Customer workspace">
-      <RecruitmentWorkspace />
+    <WorkspaceShell
+      title={organisation.name}
+      name={profile.full_name}
+      context="Customer workspace"
+      workspaceBasePath="/workspace"
+      currentSection="overview"
+    >
+      <RecruitmentWorkspace view="overview" />
     </WorkspaceShell>
   );
 }

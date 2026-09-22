@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Brand } from "./brand";
 import { LogoutButton } from "./auth/logout-button";
 
+type WorkspaceSection = "overview" | "pipeline" | "jobs" | "candidates";
+
 function homeHref(context: string) {
   if (context === "Platform Owner") return "/platform";
   if (context === "Delegated Admin") return "/admin";
@@ -14,29 +16,34 @@ function roleLabel(context: string) {
   return context;
 }
 
-function isRecruitmentWorkspace(context: string) {
-  return context === "Customer workspace" || context.startsWith("Managing Customer Workspace:");
-}
-
-const recruitmentLinks = [
-  ["Pipeline", "#pipeline"],
-  ["Jobs", "#jobs"],
-  ["Candidates", "#candidates"],
-] as const;
+const recruitmentLinks: { label: string; section: WorkspaceSection; slug: string }[] = [
+  { label: "Pipeline", section: "pipeline", slug: "pipeline" },
+  { label: "Jobs", section: "jobs", slug: "jobs" },
+  { label: "Candidates", section: "candidates", slug: "candidates" },
+];
 
 export function WorkspaceShell({
   title,
   name,
   context,
   children,
+  workspaceBasePath,
+  currentSection = "overview",
 }: {
   title: string;
   name: string;
   context: string;
   children: ReactNode;
+  workspaceBasePath?: string;
+  currentSection?: WorkspaceSection;
 }) {
-  const href = homeHref(context);
-  const recruitment = isRecruitmentWorkspace(context);
+  const overviewHref = workspaceBasePath ?? homeHref(context);
+  const recruitment = Boolean(workspaceBasePath);
+
+  const navClass = (active: boolean) =>
+    active
+      ? "flex items-center gap-3 rounded-xl bg-white/[0.08] px-3 py-3 text-sm font-semibold text-white transition"
+      : "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-400 transition hover:bg-white/[0.06] hover:text-white";
 
   return (
     <div className="min-h-screen bg-workspace lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -49,31 +56,33 @@ export function WorkspaceShell({
         </div>
 
         <div className="hidden px-4 lg:block">
-          <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500">
-            Workspace
-          </p>
+          <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-500">Workspace</p>
           <nav className="mt-3 space-y-1">
-            <Link
-              href={href}
-              className="flex items-center gap-3 rounded-xl bg-white/[0.08] px-3 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.12]"
-            >
-              <span aria-hidden="true" className="flex size-8 items-center justify-center rounded-lg bg-lime text-sidebar">
+            <Link href={overviewHref} className={navClass(currentSection === "overview")}>
+              <span
+                aria-hidden="true"
+                className={`flex size-8 items-center justify-center rounded-lg ${
+                  currentSection === "overview" ? "bg-lime text-sidebar" : "bg-white/[0.06] text-gray-400"
+                }`}
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4">
                   <path d="M4 5h16M4 12h16M4 19h10" strokeLinecap="round" />
                 </svg>
               </span>
               Overview
             </Link>
-            {recruitment && recruitmentLinks.map(([label, target]) => (
-              <Link
-                key={label}
-                href={target}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-400 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                <span className="ml-2 size-1.5 rounded-full bg-gray-600" />
-                {label}
-              </Link>
-            ))}
+
+            {recruitment &&
+              recruitmentLinks.map(({ label, section, slug }) => (
+                <Link
+                  key={section}
+                  href={`${workspaceBasePath}/${slug}`}
+                  className={navClass(currentSection === section)}
+                >
+                  <span className={`ml-2 size-1.5 rounded-full ${currentSection === section ? "bg-lime" : "bg-gray-600"}`} />
+                  {label}
+                </Link>
+              ))}
           </nav>
         </div>
 
@@ -113,15 +122,31 @@ export function WorkspaceShell({
               <LogoutButton />
             </div>
           </header>
+
           {recruitment && (
             <nav className="-mt-3 mb-6 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-              {recruitmentLinks.map(([label, target]) => (
-                <Link key={label} href={target} className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold">
+              <Link
+                href={overviewHref}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  currentSection === "overview" ? "border-sidebar bg-sidebar text-white" : "border-border bg-surface"
+                }`}
+              >
+                Overview
+              </Link>
+              {recruitmentLinks.map(({ label, section, slug }) => (
+                <Link
+                  key={section}
+                  href={`${workspaceBasePath}/${slug}`}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    currentSection === section ? "border-sidebar bg-sidebar text-white" : "border-border bg-surface"
+                  }`}
+                >
                   {label}
                 </Link>
               ))}
             </nav>
           )}
+
           {children}
         </div>
       </main>
