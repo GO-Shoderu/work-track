@@ -20,11 +20,26 @@
   --color-stage-rejected: #9ca3af;
 }
 
-body {
+html {
+  min-height: 100%;
   background: var(--color-workspace);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(170 222 0 / 0.06), transparent 28rem),
+    var(--color-workspace);
   color: var(--color-sidebar);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #dff57a;
+  color: #0d0f14;
 }
 
 :focus-visible {
@@ -38,4 +53,11 @@ aside :focus-visible {
 
 button:not(:disabled) {
   cursor: pointer;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
 }
