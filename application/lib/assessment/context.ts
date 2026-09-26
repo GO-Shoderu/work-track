@@ -2,7 +2,7 @@ import "server-only";
 import { recruitmentContext } from "../recruitment/context";
 import { assessmentRequestSchema, assessmentResultSchema } from "./schema";
 import { applicationCv, downloadApplicationCv } from "../cv/application";
-import { currentCv } from "../cv/storage";
+import { currentCv, downloadCurrentCv } from "../cv/storage";
 
 export async function assessmentContext(input: unknown) {
   const parsed = assessmentRequestSchema.safeParse(input);
@@ -33,9 +33,19 @@ export async function readAssessmentResult(input: unknown) {
   return { applicationId: context.application.id, cvVersion: cv.object_id, assessedAt: data.assessed_at, result: parsed.data };
 }
 
-// Authenticated tenant/assignment checks run before reading any public-upload CV.
+// Authenticated tenant/assignment checks run before selecting either CV source.
 export async function readApplicationCv(input: unknown) {
   const context = await assessmentContext(input);
-  if (context.application.source !== "public") throw new Error("Application CV is unavailable.");
-  return downloadApplicationCv(context, context.application.id);
+  return context.application.source === "public"
+    ? downloadApplicationCv(context, context.application.id)
+    : downloadCurrentCv(context, context.application.candidate_id);
+}
+
+// Metadata-only eligibility for recruiter controls; the assessment action and
+// download route independently re-authorize and validate the actual file.
+export async function hasApplicationCv(input: unknown) {
+  const context = await assessmentContext(input);
+  return context.application.source === "public"
+    ? !!(await applicationCv(context, context.application.id))
+    : !!(await currentCv(context, context.application.candidate_id));
 }

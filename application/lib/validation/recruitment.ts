@@ -19,6 +19,7 @@ export const stageSchema = z.strictObject({ ...scope, applicationId: uuid, stage
 export const listSchema = z.strictObject({
   ...scope, offset: z.number().int().min(0).max(100000).default(0), limit: z.number().int().min(1).max(100).default(50),
 });
+export const jobApplicationsSchema = listSchema.extend({ jobId: uuid });
 export const pipelineSchema = listSchema.extend({ jobId: uuid.optional(), candidateName: z.string().trim().max(200).optional(), stage: z.enum(stages).optional() });
 // PostgREST receives a literal substring pattern, not user-controlled LIKE wildcards.
 export function namePattern(name: string) { return `%${name.replace(/[\\%_]/g, "\\$&")}%`; }

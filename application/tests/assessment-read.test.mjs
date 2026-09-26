@@ -6,7 +6,7 @@ const key='__assessmentRead';
 const org='11111111-1111-4111-8111-111111111111',app='22222222-2222-4222-8222-222222222222',version='33333333-3333-4333-8333-333333333333';
 const hook=registerHooks({resolve(s,c,next){let source;if(c.parentURL?.endsWith('/lib/assessment/context.ts')){
  if(s==='../recruitment/context')source=`export async function recruitmentContext(id){const f=globalThis.${key};f.requested=id;if(f.denied)throw Error('denied');return f.context;}`;
- if(s==='../cv/storage')source=`export async function currentCv(){return globalThis.${key}.cv;}`;
+ if(s==='../cv/storage')source=`export async function currentCv(){return globalThis.${key}.cv;} export async function downloadCurrentCv(){throw Error('Download is outside this metadata-only test');}`;
  }if(source)return {url:'data:text/javascript,'+encodeURIComponent(source),shortCircuit:true};
  if(s.startsWith('.')&&c.parentURL?.startsWith('file:')){const u=new URL(s+'.ts',c.parentURL);if(existsSync(u))return {url:u.href,shortCircuit:true};}return next(s,c);
 }});

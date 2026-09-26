@@ -1,7 +1,7 @@
-import { readAssessmentResult } from "../../lib/assessment/context";
+import { hasApplicationCv, readAssessmentResult } from "../../lib/assessment/context";
 import { inspectCurrentCv } from "../../lib/cv/storage";
 import { listCandidates, listJobs, listPipeline } from "../../lib/recruitment/queries";
-import type { ApplicationStage } from "../../lib/supabase/database.types";
+import type { ApplicationSource, ApplicationStage } from "../../lib/supabase/database.types";
 import { CandidateFilter } from "./candidate-filter";
 import { CandidateCvAssessment } from "./candidate-cv-assessment";
 import { PipelineBoard } from "./pipeline-board";
@@ -14,6 +14,7 @@ type PipelineJoin = {
   candidate_id: string;
   job_id: string;
   stage: ApplicationStage;
+  source: ApplicationSource;
   candidate: { id: string; full_name: string } | { id: string; full_name: string }[] | null;
   job: { id: string; title: string } | { id: string; title: string }[] | null;
 };
@@ -42,7 +43,7 @@ export async function RecruitmentWorkspace({
     const candidate = firstRelation(row.candidate);
     const job = firstRelation(row.job);
     if (!candidate || !job) return [];
-    return [{ id: row.id, candidateId: row.candidate_id, candidateName: candidate.full_name, jobId: row.job_id, jobTitle: job.title, stage: row.stage }];
+    return [{ id: row.id, candidateId: row.candidate_id, candidateName: candidate.full_name, jobId: row.job_id, jobTitle: job.title, stage: row.stage, source: row.source }];
   });
 
   const needsCandidateDetails = view === "candidates";
@@ -52,6 +53,10 @@ export async function RecruitmentWorkspace({
   const assessmentEntries = needsCandidateDetails
     ? await Promise.all(pipeline.map(async (application) => [application.id, await readAssessmentResult({ ...actionScope, applicationId: application.id })] as const))
     : [];
+  const applicationCvEntries = needsCandidateDetails
+    ? await Promise.all(pipeline.map(async (application) => [application.id, await hasApplicationCv({ ...actionScope, applicationId: application.id })] as const))
+    : [];
+  const applicationCvs = new Map(applicationCvEntries);
   const cvs = new Map(cvEntries);
   const assessments = new Map(assessmentEntries);
 
@@ -140,6 +145,8 @@ export async function RecruitmentWorkspace({
                 id: application.id,
                 jobTitle: application.jobTitle,
                 stage: application.stage,
+                source: application.source,
+                cvAvailable: applicationCvs.get(application.id) ?? false,
                 assessment: assessments.get(application.id) ?? null,
               }));
             return (

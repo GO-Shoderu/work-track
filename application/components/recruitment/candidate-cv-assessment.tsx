@@ -32,6 +32,8 @@ type CandidateApplication = {
   id: string;
   jobTitle: string;
   stage: string;
+  source: "manual" | "public";
+  cvAvailable: boolean;
   assessment: Assessment | null;
 };
 
@@ -119,7 +121,7 @@ export function CandidateCvAssessment({
                 </div>
                 <button
                   type="button"
-                  disabled={!cv || assessing}
+                  disabled={!application.cvAvailable || assessing}
                   onClick={() => {
                     setMessage(null);
                     setActiveApplication(application.id);
@@ -140,7 +142,7 @@ export function CandidateCvAssessment({
                 </button>
               </div>
 
-              {!cv && <p className="mt-3 text-xs text-muted">Upload a readable PDF CV before running an assessment.</p>}
+              {!application.cvAvailable && <p className="mt-3 text-xs text-muted">{application.source === "public" ? "The submitted Application CV is unavailable." : "Upload a readable PDF CV before running an assessment."}</p>}
 
               {application.assessment && (
                 <div className="mt-4 space-y-4 border-t border-border pt-4">
