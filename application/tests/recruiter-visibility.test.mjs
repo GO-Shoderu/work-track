@@ -20,6 +20,7 @@ const {listJobApplications}=await import('../lib/recruitment/job-applications.ts
 const {hasApplicationCv}=await import('../lib/assessment/context.ts?recruiter-visibility');
 const {listPipeline}=await import('../lib/recruitment/queries.ts?recruiter-visibility');
 const {GET}=await import('../app/api/recruitment/applications/[applicationId]/cv/route.ts?recruiter-visibility');
+const {GET: candidateGET}=await import('../app/api/recruitment/candidates/[candidateId]/cv/route.ts?recruiter-visibility');
 hooks.deregister();after(()=>delete globalThis[key]);
 const uuid=n=>`10000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const org=uuid(1),other=uuid(2),job=uuid(3),jobB=uuid(4),foreignJob=uuid(5),candidate=uuid(6),missingCandidate=uuid(7),foreignCandidate=uuid(8);
@@ -134,4 +135,43 @@ test('Existing recruiter reassessment controls use per-Application eligibility f
  assert.match(ui,/disabled=\{!application.cvAvailable \|\| assessing\}/);assert.doesNotMatch(ui,/disabled=\{!cv \|\| assessing\}/);
  const loader=readFileSync(new URL('../components/recruitment/recruitment-workspace.tsx',import.meta.url),'utf8');
  assert.match(loader,/await hasApplicationCv/);assert.match(loader,/cvAvailable: applicationCvs.get\(application.id\)/);
+});
+
+const candidateRequest=(id,query='')=>candidateGET(new Request('https://work.example/api/recruitment/candidates/'+id+'/cv'+query),{params:Promise.resolve({candidateId:id})});
+test('Candidate profile CV endpoint returns own current CV with private PDF headers and no Storage disclosure',async()=>{
+ const f=setup();const response=await candidateRequest(candidate);
+ assert.equal(response.status,200);assert.deepEqual(new Uint8Array(await response.arrayBuffer()),sharedBytes);
+ assert.deepEqual(f.downloads,[sharedPath]);
+ assert.equal(response.headers.get('Content-Type'),'application/pdf');
+ assert.equal(response.headers.get('Content-Disposition'),`inline; filename="candidate-${candidate}-cv.pdf"`);
+ assert.equal(response.headers.get('Cache-Control'),'private, no-store');
+ assert.equal(response.headers.get('X-Content-Type-Options'),'nosniff');
+ assert.doesNotMatch(JSON.stringify([...response.headers]),/storage_path|candidate-cvs|sb_secret|https?:/);
+ assert.equal(f.calls.some(c=>c.table==='application_cvs'),false);
+ for(const table of ['candidates','candidate_cvs'])assert.ok(f.calls.find(c=>c.table===table).filters.some(v=>v[1]==='organisation_id'&&v[2]===org));
+});
+test('Candidate profile CV endpoint permits assigned Admin and explicit Owner but denies revoked/foreign/anonymous access',async()=>{
+ let f=setup('admin');assert.equal((await candidateRequest(candidate,'?organisationId='+org)).status,200);
+ f.assigned.clear();f.downloads=[];assert.equal((await candidateRequest(candidate,'?organisationId='+org)).status,404);assert.deepEqual(f.downloads,[]);
+ f=setup('customer');assert.equal((await candidateRequest(foreignCandidate)).status,404);assert.equal((await candidateRequest(foreignCandidate,'?organisationId='+other)).status,404);assert.deepEqual(f.downloads,[]);
+ f=setup('admin');assert.equal((await candidateRequest(foreignCandidate,'?organisationId='+other)).status,404);assert.deepEqual(f.downloads,[]);
+ f=setup('platform_owner');assert.equal((await candidateRequest(candidate)).status,404);assert.equal((await candidateRequest(candidate,'?organisationId='+org)).status,200);
+ f=setup();f.anonymous=true;assert.equal((await candidateRequest(candidate)).status,404);assert.deepEqual(f.downloads,[]);
+});
+test('Missing Candidate or current CV returns safe private 404 and never falls back to Application CV',async()=>{
+ for(const id of [missingCandidate,uuid(99),candidate]){
+  const f=setup();if(id===candidate)f.rows.candidate_cvs=[];
+  const response=await candidateRequest(id);assert.equal(response.status,404);assert.equal(await response.text(),'CV not found.');
+  assert.equal(response.headers.get('Cache-Control'),'private, no-store');assert.equal(response.headers.get('X-Content-Type-Options'),'nosniff');assert.deepEqual(f.downloads,[]);
+ }
+});
+test('Candidate profile CV endpoint rejects invalid inputs, unsafe metadata paths and invalid downloaded PDF bytes',async()=>{
+ for(const [id,query] of [['bad',''],[candidate,'?organisationId=bad'],[candidate,'?organisationId='+org+'&organisationId='+other],[candidate,'?storagePath=evil']]){
+  const f=setup();assert.equal((await candidateRequest(id,query)).status,404);assert.deepEqual(f.downloads,[]);
+ }
+ for(const bytes of [new TextEncoder().encode('not-pdf'),new TextEncoder().encode('%PDF-wrong-size'),new Uint8Array(5242881)]){
+  const f=setup();f.downloadBytes=bytes;assert.equal((await candidateRequest(candidate)).status,404);
+ }
+ let f=setup();f.rows.candidate_cvs[0].storage_path='foreign/path';assert.equal((await candidateRequest(candidate)).status,404);assert.deepEqual(f.downloads,[]);
+ f=setup();f.storageError=true;const response=await candidateRequest(candidate);assert.equal(response.status,404);assert.equal(await response.text(),'CV not found.');
 });
