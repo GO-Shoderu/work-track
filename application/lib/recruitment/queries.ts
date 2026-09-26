@@ -59,7 +59,7 @@ export async function listPipeline(input: unknown = {}) {
   const { client, organisation } = await recruitmentContext(parsed.data.organisationId);
   const { offset, limit, jobId, candidateName, stage } = parsed.data;
   try {
-    let query = client.from("applications").select("id,organisation_id,candidate_id,job_id,stage,created_at,updated_at,candidate:candidates!applications_candidate_fkey!inner(id,full_name),job:jobs!applications_job_fkey!inner(id,title)")
+    let query = client.from("applications").select("id,organisation_id,candidate_id,job_id,stage,source,assessment_status,created_at,updated_at,candidate:candidates!applications_candidate_fkey!inner(id,full_name),job:jobs!applications_job_fkey!inner(id,title)")
       .eq("organisation_id", organisation.id).is("removed_at", null);
     if (jobId) query = query.eq("job_id", jobId);
     if (candidateName) query = query.ilike("candidate.full_name", namePattern(candidateName));
