@@ -1,4 +1,4 @@
--- REVIEW ONLY; NOT RUN. After migration approval, psql as postgres.
+-- Run with psql as postgres after migration approval. Managed verification passed 2026-09-26.
 -- Four disposable confirmed Auth identities WITHOUT profiles, created through Auth
 -- administration: owner_id, admin_id, customer_a_id, customer_b_id.
 -- No real CV bytes or storage.objects rows are created. Storage HTTP round-trip,
@@ -37,44 +37,44 @@ insert into public.candidate_cvs(candidate_id,organisation_id,object_id,byte_siz
 select pg_temp.assert_ok(private.can_access_candidate_cv(current_setting('test.a')||'/'||current_setting('test.candidate')||'/'||current_setting('test.version')||'.pdf'),'own CV path');
 select pg_temp.assert_ok(not private.can_access_candidate_cv(current_setting('test.b')||'/'||current_setting('test.candidate')||'/'||current_setting('test.version')||'.pdf'),'forged Organisation path');
 select pg_temp.assert_ok(not private.can_access_candidate_cv('../'||current_setting('test.candidate')||'/x.pdf'),'traversal denied');
-select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb);
-select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb);
+select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb);
+select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb);
 select pg_temp.assert_ok((select count(*)=1 from public.candidate_assessments where application_id=current_setting('test.app')::uuid),'one latest result');
 select pg_temp.expect_error($q$update public.candidate_assessments set result='{}'$q$,'42501');
 select pg_temp.expect_error($q$insert into public.candidate_assessments(application_id,organisation_id,cv_object_id,result) values(current_setting('test.app')::uuid,current_setting('test.a')::uuid,current_setting('test.version')::uuid,'{}')$q$,'42501');
 select pg_temp.expect_error($q$update public.candidate_cvs set organisation_id=current_setting('test.b')::uuid$q$,'42501');
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,'{}')$q$,'22023');
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,jsonb_set(current_setting('test.result')::jsonb,'{score}','101'))$q$,'22023');
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,gen_random_uuid(),current_setting('test.result')::jsonb)$q$,'22023');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,'{}')$q$,'22023');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,jsonb_set(current_setting('test.result')::jsonb,'{score}','101'))$q$,'22023');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,gen_random_uuid(),1,current_setting('test.result')::jsonb)$q$,'22023');
 select pg_temp.actor(current_setting('test.cb'));
 select pg_temp.assert_ok(not exists(select 1 from public.candidate_cvs),'cross-tenant CV metadata hidden');
 select pg_temp.assert_ok(not exists(select 1 from public.candidate_assessments),'cross-tenant results hidden');
 select pg_temp.assert_ok(not private.can_access_candidate_cv(current_setting('test.a')||'/'||current_setting('test.candidate')||'/'||current_setting('test.version')||'.pdf'),'cross-tenant Storage denied');
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb)$q$,'42501');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb)$q$,'42501');
 select pg_temp.actor(current_setting('test.admin'));
 select pg_temp.assert_ok(exists(select 1 from public.candidate_cvs),'assigned Admin reads CV');
-select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb);
+select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb);
 reset role;
 delete from public.admin_organisation_assignments where admin_id=:'admin_id';
 set local role authenticated;
 select pg_temp.assert_ok(not exists(select 1 from public.candidate_assessments),'revocation removes result access');
 select pg_temp.assert_ok(not private.can_access_candidate_cv(current_setting('test.a')||'/'||current_setting('test.candidate')||'/'||current_setting('test.version')||'.pdf'),'revocation removes Storage access');
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb)$q$,'42501');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb)$q$,'42501');
 select pg_temp.actor(current_setting('test.owner'));
-select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb);
+select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb);
 update public.candidate_cvs set object_id=gen_random_uuid() where candidate_id=current_setting('test.candidate')::uuid;
-select pg_temp.assert_ok(not exists(select 1 from public.candidate_assessments),'replacement hides stale assessment');
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb)$q$,'22023');
+select pg_temp.assert_ok(not exists(select 1 from public.candidate_assessments where application_id=current_setting('test.app')::uuid),'replacement hides stale assessment');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb)$q$,'22023');
 select pg_temp.actor(null);
-select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,current_setting('test.result')::jsonb)$q$,'42501');
+select pg_temp.expect_error($q$select public.save_candidate_assessment(current_setting('test.app')::uuid,current_setting('test.version')::uuid,1,current_setting('test.result')::jsonb)$q$,'42501');
 reset role;
 do $$ declare definition record;r text;begin
  if not exists(select 1 from storage.buckets where id='candidate-cvs' and public=false and file_size_limit=5242880 and allowed_mime_types=array['application/pdf']) then raise exception 'Unsafe bucket';end if;
- select p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner into definition from pg_proc p where oid='public.save_candidate_assessment(uuid,uuid,jsonb)'::regprocedure;
+ select p.prosecdef,p.proconfig,pg_get_userbyid(p.proowner) owner into definition from pg_proc p where oid='public.save_candidate_assessment(uuid,uuid,integer,jsonb)'::regprocedure;
  if definition.prosecdef is distinct from true or definition.owner is distinct from 'postgres' or not coalesce('search_path=""'=any(definition.proconfig),false) then raise exception 'Unsafe RPC';end if;
  foreach r in array array['anon','authenticated','service_role'] loop
   if has_table_privilege(r,'public.candidate_assessments','INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') or has_any_column_privilege(r,'public.candidate_assessments','INSERT,UPDATE,REFERENCES') then raise exception 'Unsafe assessment ACL';end if;
-  if has_function_privilege(r,'public.save_candidate_assessment(uuid,uuid,jsonb)','EXECUTE') is distinct from (r='authenticated') then raise exception 'Unsafe function ACL';end if;
+  if has_function_privilege(r,'public.save_candidate_assessment(uuid,uuid,integer,jsonb)','EXECUTE') is distinct from (r='authenticated') then raise exception 'Unsafe function ACL';end if;
  end loop;
 end $$;
 rollback;

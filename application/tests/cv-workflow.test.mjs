@@ -10,7 +10,7 @@ const hooks=registerHooks({resolve(s,c,next){let source;
   if(s==='next/headers')source=`export async function headers(){return new Headers({origin:globalThis.${key}.origin});}`;
   if(s==='../env')source='export function getEnvironment(){return {APP_URL:"http://localhost:3000"};}';
   if(s==='./pdf'||s==='../cv/pdf')source=`export async function extractPdfText(){const f=globalThis.${key};f.calls.push('extract');if(f.badPdf)throw Error('bad PDF');return 'Professional evidence in CV';}`;
-  if(s==='./context')source=`export async function assessmentContext(){const f=globalThis.${key};if(f.denied)throw Error('denied');return {...f.context,application:{id:'${app}',candidate_id:'${candidate}'},job:{title:'Engineer',description:null}};}`;
+  if(s==='./context')source=`export async function assessmentContext(){const f=globalThis.${key};if(f.denied)throw Error('denied');return {...f.context,application:{id:'${app}',candidate_id:'${candidate}'},job:{title:'Engineer',description:null,content_version:7}};}`;
   if(s==='./provider')source=`export function requireAssessmentProvider(){if(globalThis.${key}.noConfig)throw Error('missing');} export async function assessWithProvider(){const f=globalThis.${key};f.calls.push('provider');return f.result;}`;
  }
  if(source)return {url:'data:text/javascript,'+encodeURIComponent(source),shortCircuit:true};
@@ -45,5 +45,5 @@ test('Assessment fails closed on missing configuration, invalid output and revok
  let f=setup();f.noConfig=true;assert.equal((await requestJobCvAssessment({applicationId:app})).ok,false);assert.equal(f.calls.length,0);
  f=setup();f.cv=f.previous();f.result={score:999};assert.equal((await requestJobCvAssessment({applicationId:app})).ok,false);assert.equal(f.calls.some(c=>Array.isArray(c)&&c[0]==='rpc'),false);
  f=setup();f.cv=f.previous();f.saveError=true;assert.equal((await requestJobCvAssessment({applicationId:app})).ok,false);
- f=setup();f.cv=f.previous();assert.equal((await requestJobCvAssessment({applicationId:app})).ok,true);const rpc=f.calls.find(c=>Array.isArray(c)&&c[0]==='rpc');assert.equal(rpc[1],'save_candidate_assessment');assert.deepEqual(Object.keys(rpc[2]).sort(),['target_application_id','target_cv_object_id','validated_result']);
+ f=setup();f.cv=f.previous();assert.equal((await requestJobCvAssessment({applicationId:app})).ok,true);const rpc=f.calls.find(c=>Array.isArray(c)&&c[0]==='rpc');assert.equal(rpc[1],'save_candidate_assessment');assert.equal(rpc[2].target_job_content_version,7);assert.deepEqual(Object.keys(rpc[2]).sort(),['target_application_id','target_cv_object_id','target_job_content_version','validated_result']);
 });

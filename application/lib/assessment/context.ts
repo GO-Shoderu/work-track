@@ -10,7 +10,7 @@ export async function assessmentContext(input: unknown) {
   const { data: application, error } = await context.client.from("applications").select("id,candidate_id,job_id,organisation_id")
     .eq("organisation_id", context.organisation.id).eq("id", parsed.data.applicationId).maybeSingle();
   if (error || !application) throw new Error("Application is unavailable.");
-  const { data: job, error: jobError } = await context.client.from("jobs").select("id,title,description")
+  const { data: job, error: jobError } = await context.client.from("jobs").select("id,title,description,content_version")
     .eq("organisation_id", context.organisation.id).eq("id", application.job_id).maybeSingle();
   const { data: candidate, error: candidateError } = await context.client.from("candidates").select("id")
     .eq("organisation_id", context.organisation.id).eq("id", application.candidate_id).maybeSingle();
@@ -21,8 +21,8 @@ export async function readAssessmentResult(input: unknown) {
   const context = await assessmentContext(input);
   const cv = await currentCv(context, context.application.candidate_id);
   if (!cv) return null;
-  const { data, error } = await context.client.from("candidate_assessments").select("result,cv_object_id,assessed_at")
-    .eq("organisation_id", context.organisation.id).eq("application_id", context.application.id).eq("cv_object_id", cv.object_id).maybeSingle();
+  const { data, error } = await context.client.from("candidate_assessments").select("result,cv_object_id,job_content_version,assessed_at")
+    .eq("organisation_id", context.organisation.id).eq("application_id", context.application.id).eq("cv_object_id", cv.object_id).eq("job_content_version", context.job.content_version).maybeSingle();
   if (error) throw new Error("Assessment is unavailable.");
   if (!data) return null;
   const parsed = assessmentResultSchema.safeParse(data.result);

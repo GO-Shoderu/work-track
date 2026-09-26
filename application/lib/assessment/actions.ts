@@ -16,10 +16,10 @@ export async function requestJobCvAssessment(input: unknown) {
     const { bytes, version } = await downloadCurrentCv(context, context.application.candidate_id);
     const text = await extractPdfText(bytes);
     const result = assessmentResultSchema.parse(await assessWithProvider(context.job, text));
-    // Authenticated RPC rechecks actor role, current assignment and CV version
+    // Authenticated RPC rechecks actor role, current assignment, Job content and CV versions
     // after the slow external request. No privileged table client is constructed.
     const saved = await context.client.rpc("save_candidate_assessment", {
-      target_application_id: context.application.id, target_cv_object_id: version, validated_result: result,
+      target_application_id: context.application.id, target_cv_object_id: version, target_job_content_version: context.job.content_version, validated_result: result,
     });
     if (saved.error || saved.data !== context.application.id) throw new Error("Persistence not confirmed");
     return { ok: true, applicationId: context.application.id, cvVersion: version, result } as const;

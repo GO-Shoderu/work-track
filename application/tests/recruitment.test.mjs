@@ -21,7 +21,7 @@ const actions=await import('../lib/recruitment/actions.ts');
 const queries=await import('../lib/recruitment/queries.ts');
 hooks.deregister();after(()=>delete globalThis[key]);
 function setup(){const f={origin:'http://localhost:3000',org,calls:[],denied:false,error:null,data:{id}};
- f.client={from(t){f.calls.push(['from',t]);const q={then(resolve,reject){return Promise.resolve({data:f.data,error:f.error}).then(resolve,reject);},single(){return Promise.resolve({data:f.data,error:f.error});}};for(const op of ['insert','update','select','eq','ilike','order','range'])q[op]=(...args)=>{f.calls.push([op,...args]);return q;};return q;}};globalThis[key]=f;return f;}
+ f.client={from(t){f.calls.push(['from',t]);const q={then(resolve,reject){return Promise.resolve({data:f.data,error:f.error}).then(resolve,reject);},single(){return Promise.resolve({data:f.data,error:f.error});}};for(const op of ['insert','update','select','eq','is','ilike','order','range'])q[op]=(...args)=>{f.calls.push([op,...args]);return q;};return q;}};globalThis[key]=f;return f;}
 test('Recruitment validation: required names, bounded fields, optional contact data and exact stages',()=>{
  assert.equal(jobSchema.parse({title:' Engineer '}).title,'Engineer');
  assert.equal(candidateSchema.parse({fullName:' Jane ',email:' ',phone:null}).email,null);
@@ -59,7 +59,7 @@ test('Stage updates change only stage and filter by trusted Organisation and App
 });
 test('Pipeline combines literal name, Job, stage and tenant filters before deterministic pagination',async()=>{
  const f=setup();await queries.listPipeline({jobId:id,candidateName:'Jane%',stage:'offer',offset:50,limit:25});
- for(const call of [['eq','organisation_id',org],['eq','job_id',id],['eq','stage','offer'],['ilike','candidate.full_name','%Jane\\%%'],['range',50,74]])assert.ok(f.calls.some(c=>JSON.stringify(c)===JSON.stringify(call)));
+ for(const call of [['is','removed_at',null],['eq','organisation_id',org],['eq','job_id',id],['eq','stage','offer'],['ilike','candidate.full_name','%Jane\\%%'],['range',50,74]])assert.ok(f.calls.some(c=>JSON.stringify(c)===JSON.stringify(call)));
  assert.match(f.calls.find(c=>c[0]==='select')[1],/candidates!applications_candidate_fkey!inner/);
 });
 test('All loaders scope reads and authorization denial happens before reads/writes',async()=>{

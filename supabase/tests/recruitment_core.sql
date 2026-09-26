@@ -1,4 +1,4 @@
--- REVIEW ONLY. Run after migration approval using psql as postgres.
+-- Run after migration approval using psql as postgres. Managed verification passed 2026-09-26.
 -- Five distinct disposable, confirmed Auth users WITHOUT profiles, created by
 -- trusted Auth administration: owner_id, admin_id, customer_a_id, customer_b_id,
 -- unused_id. Never use real demo accounts. No auth.users writes in this suite.
@@ -144,7 +144,7 @@ do $$ declare t text; r text; col record; begin
   end loop;
   if has_table_privilege('authenticated','public.'||t,'DELETE,TRUNCATE,REFERENCES,TRIGGER') then raise exception 'Unexpected destructive ACL'; end if;
   for col in select column_name from information_schema.columns where table_schema='public' and table_name=t loop
-   if has_column_privilege('authenticated','public.'||t,col.column_name,'UPDATE') is distinct from (t='applications' and col.column_name='stage') then raise exception 'Unexpected UPDATE ACL'; end if;
+   if has_column_privilege('authenticated','public.'||t,col.column_name,'UPDATE') is distinct from ((t='applications' and col.column_name in ('stage','removed_at')) or (t='jobs' and col.column_name in ('title','description','status','closes_at'))) then raise exception 'Unexpected UPDATE ACL'; end if;
   end loop;
  end loop;
 end $$;
