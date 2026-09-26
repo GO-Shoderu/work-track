@@ -74,7 +74,12 @@ export function JobManagementCard({
             <h3 className="text-base font-semibold tracking-[-0.015em]">{title}</h3>
             <JobStatusBadge status={status} />
           </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{description || (status === "draft" ? "Add a description before publishing this role." : "No description available.")}</p>
+          <p
+            className="mt-2 max-w-3xl line-clamp-3 text-sm leading-6 text-muted"
+            title={description ?? undefined}
+          >
+            {description || (status === "draft" ? "Add a description before publishing this role." : "No description available.")}
+          </p>
         </div>
       </div>
 
