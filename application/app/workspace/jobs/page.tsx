@@ -12,12 +12,13 @@ export default async function JobsPage({
 }) {
   await requireIdentity("customer");
   const { profile, organisation } = await requireOrganisationAccess();
+  const careersSlug = (organisation as typeof organisation & { careers_slug?: string }).careers_slug;
   const query = await searchParams;
   const editJobId = typeof query.editJob === "string" ? query.editJob : undefined;
 
   return (
     <WorkspaceShell title={organisation.name} name={profile.full_name} context="Customer workspace" workspaceBasePath="/workspace" currentSection="jobs">
-      <RecruitmentWorkspace view="jobs" editJobId={editJobId} />
+      <RecruitmentWorkspace view="jobs" editJobId={editJobId} careersSlug={careersSlug} />
     </WorkspaceShell>
   );
 }

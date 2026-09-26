@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function WorkspacePage() {
   await requireIdentity("customer");
   const { profile, organisation } = await requireOrganisationAccess();
+  const careersSlug = (organisation as typeof organisation & { careers_slug?: string }).careers_slug;
 
   return (
     <WorkspaceShell
@@ -17,7 +18,7 @@ export default async function WorkspacePage() {
       workspaceBasePath="/workspace"
       currentSection="overview"
     >
-      <RecruitmentWorkspace view="overview" />
+      <RecruitmentWorkspace view="overview" careersSlug={careersSlug} />
     </WorkspaceShell>
   );
 }

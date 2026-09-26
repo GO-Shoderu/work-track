@@ -15,6 +15,7 @@ export default async function ManagedWorkspacePage({ params }: { params: Promise
   const { organisationId } = await params;
   const { profile, organisation } = await requireOrganisationAccess(organisationId);
   const workspaceBasePath = `/workspace/${organisation.id}`;
+  const careersSlug = (organisation as typeof organisation & { careers_slug?: string }).careers_slug;
 
   return (
     <WorkspaceShell
@@ -36,7 +37,7 @@ export default async function ManagedWorkspacePage({ params }: { params: Promise
           Return to administration
         </Link>
       </div>
-      <RecruitmentWorkspace organisationId={organisation.id} view="overview" />
+      <RecruitmentWorkspace organisationId={organisation.id} view="overview" careersSlug={careersSlug} />
     </WorkspaceShell>
   );
 }

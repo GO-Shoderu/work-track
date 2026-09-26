@@ -22,6 +22,7 @@ export default async function ManagedJobsPage({
   const query = await searchParams;
   const editJobId = typeof query.editJob === "string" ? query.editJob : undefined;
   const workspaceBasePath = `/workspace/${organisation.id}`;
+  const careersSlug = (organisation as typeof organisation & { careers_slug?: string }).careers_slug;
 
   return (
     <WorkspaceShell title={organisation.name} name={profile.full_name} context={`Managing Customer Workspace: ${organisation.name}`} workspaceBasePath={workspaceBasePath} currentSection="jobs">
@@ -32,7 +33,7 @@ export default async function ManagedJobsPage({
         </div>
         <Link className="rounded-lg border border-border bg-surface px-3.5 py-2 text-xs font-semibold hover:bg-subtle" href={managementReturnPath(profile.role)}>Return to administration</Link>
       </div>
-      <RecruitmentWorkspace organisationId={organisation.id} view="jobs" editJobId={editJobId} />
+      <RecruitmentWorkspace organisationId={organisation.id} view="jobs" editJobId={editJobId} careersSlug={careersSlug} />
     </WorkspaceShell>
   );
 }
