@@ -5,8 +5,9 @@ import type { ApplicationStage } from "../../lib/supabase/database.types";
 import { CandidateFilter } from "./candidate-filter";
 import { CandidateCvAssessment } from "./candidate-cv-assessment";
 import { JobManagementCard } from "./job-management-card";
+import { JobEditorLauncher } from "./job-editor-launcher";
 import { PipelineBoard } from "./pipeline-board";
-import { CreateApplicationForm, CreateCandidateForm, CreateJobForm } from "./recruitment-forms";
+import { CreateApplicationForm, CreateCandidateForm } from "./recruitment-forms";
 
 type RecruitmentView = "overview" | "pipeline" | "jobs" | "candidates";
 
@@ -94,7 +95,7 @@ export async function RecruitmentWorkspace({
             <h2 className="text-lg font-semibold">Open roles</h2>
             <p className="mt-1 text-sm text-muted">Create and review roles available in this workspace.</p>
           </div>
-          <CreateJobForm organisationId={organisationId} />
+          <JobEditorLauncher />
         </div>
       </div>
       {jobs.length ? (
