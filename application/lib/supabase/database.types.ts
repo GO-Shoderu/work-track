@@ -17,7 +17,7 @@ export type Database = {
     Tables: {
       candidate_assessments: { Row: { application_id: string; organisation_id: string; cv_object_id: string; job_content_version: number; result: unknown; assessed_at: string }; Insert: never; Update: never; Relationships: [] };
       candidate_cvs: { Row: { candidate_id: string; organisation_id: string; object_id: string; storage_path: string; byte_size: number; updated_at: string }; Insert: { candidate_id: string; organisation_id: string; object_id: string; byte_size: number }; Update: { object_id: string; byte_size: number }; Relationships: [] };
-      jobs: { Row: Job; Insert: Pick<Job, "organisation_id" | "title"> & Partial<Pick<Job, "description">>; Update: Partial<Pick<Job, "title" | "description" | "status" | "closes_at">>; Relationships: [] };
+      jobs: { Row: Job; Insert: never; Update: never; Relationships: [] };
       candidates: { Row: Candidate; Insert: Pick<Candidate, "organisation_id" | "full_name"> & Partial<Pick<Candidate, "email" | "phone" | "linkedin_url">>; Update: never; Relationships: [] };
       applications: { Row: Application; Insert: Pick<Application, "organisation_id" | "candidate_id" | "job_id">; Update: Partial<Pick<Application, "stage" | "removed_at">>; Relationships: [
         { foreignKeyName: "applications_candidate_fkey"; columns: ["organisation_id", "candidate_id"]; isOneToOne: false; referencedRelation: "candidates"; referencedColumns: ["organisation_id", "id"] },
@@ -29,6 +29,8 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      save_job_content: { Args: { target_organisation_id: string; target_job_id: string | null; job_title: string; job_document: unknown; job_closes_at: string | null; expected_content_version: number | null; draft_only: boolean }; Returns: string };
+      transition_job: { Args: { target_organisation_id: string; target_job_id: string; next_status: JobStatus }; Returns: string };
       save_candidate_assessment: { Args: { target_application_id: string; target_cv_object_id: string; target_job_content_version: number; validated_result: unknown }; Returns: string };
       provision_customer_organisation: { Args: { target_auth_user_id: string; organisation_name: string; customer_full_name: string }; Returns: string };
       provision_customer_for_organisation: { Args: { target_auth_user_id: string; organisation_id: string; customer_full_name: string }; Returns: string };
