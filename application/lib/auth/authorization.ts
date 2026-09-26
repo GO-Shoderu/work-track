@@ -21,7 +21,7 @@ export async function requireOrganisationAccess(requestedId?: string) {
   }
   if (!canAccessOrganisation(profile, parsed.data, assigned)) notFound();
   const { data: organisation, error } = await client.from("organisations")
-    .select("id, name").eq("id", parsed.data).maybeSingle();
+    .select("id, name, careers_slug").eq("id", parsed.data).maybeSingle();
   if (error) throw new Error("Your workspace is temporarily unavailable.");
   if (!organisation) notFound();
   return { ...identity, organisation };
