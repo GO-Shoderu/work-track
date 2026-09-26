@@ -4,6 +4,7 @@ import { listCandidates, listJobs, listPipeline } from "../../lib/recruitment/qu
 import type { ApplicationStage } from "../../lib/supabase/database.types";
 import { CandidateFilter } from "./candidate-filter";
 import { CandidateCvAssessment } from "./candidate-cv-assessment";
+import { JobManagementCard } from "./job-management-card";
 import { PipelineBoard } from "./pipeline-board";
 import { CreateApplicationForm, CreateCandidateForm, CreateJobForm } from "./recruitment-forms";
 
@@ -97,14 +98,28 @@ export async function RecruitmentWorkspace({
         </div>
       </div>
       {jobs.length ? (
-        <ul className="divide-y divide-border">
-          {jobs.map((job) => (
-            <li key={job.id} className="px-5 py-5 sm:px-6">
-              <p className="text-sm font-semibold">{job.title}</p>
-              <p className="mt-1 max-w-3xl text-sm leading-5 text-muted">{job.description || "No job description provided."}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="grid gap-4 bg-[#f8f9fb] p-4 sm:p-5">
+          {jobs.map((job) => {
+            const futureJob = job as typeof job & {
+              status?: "draft" | "published" | "closed" | "archived";
+              closes_at?: string | null;
+              teaser?: string | null;
+              public_id?: string | null;
+            };
+            const applicationCount = pipeline.filter((application) => application.jobId === job.id).length;
+            return (
+              <JobManagementCard
+                key={job.id}
+                title={job.title}
+                description={futureJob.teaser || job.description}
+                status={futureJob.status ?? "draft"}
+                closesAt={futureJob.closes_at ?? null}
+                applicationCount={applicationCount}
+                publicUrl={null}
+              />
+            );
+          })}
+        </div>
       ) : (
         <p className="px-6 py-12 text-center text-sm text-muted">No jobs yet. Create the first role above.</p>
       )}
