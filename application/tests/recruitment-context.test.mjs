@@ -20,8 +20,8 @@ const {recruitmentContext}=await import('../lib/recruitment/context.ts');
 const {getJobForEdit}=await import('../lib/recruitment/queries.ts?edit-loader');
 hooks.deregister();after(()=>delete globalThis[key]);
 function setup(role,assigned=false){
- const f={assigned,calls:[],anonymous:false,jobSelections:[],jobError:null,jobs:[{id:'44444444-4444-4444-8444-444444444444',organisation_id:org,title:'Engineer',description_rich:{type:'doc',content:[{type:'paragraph'}]},closes_at:null,status:'draft',content_version:2},{id:'55555555-5555-4555-8555-555555555555',organisation_id:other,title:'Other role',description_rich:null,closes_at:null,status:'closed',content_version:1}]};
- f.identity={profile:{id:'33333333-3333-4333-8333-333333333333',role,organisation_id:role==='customer'?org:null},client:{from(table){const filters={};let columns;const q={select(value){columns=value;if(table==='jobs')f.jobSelections.push(value);return q;},eq(k,v){filters[k]=v;return q;},async maybeSingle(){f.calls.push({table,filters});if(table==='jobs'){const row=f.jobs.find(j=>j.id===filters.id&&j.organisation_id===filters.organisation_id);return {data:row?Object.fromEntries(columns.split(',').map(k=>[k,row[k]])):null,error:f.jobError};}return {data:table==='admin_organisation_assignments'?(f.assigned?{organisation_id:filters.organisation_id}:null):{id:filters.id,name:'Fixture'},error:null};}};return q;}}};
+ const f={assigned,calls:[],anonymous:false,jobSelections:[],organisationSelections:[],jobError:null,jobs:[{id:'44444444-4444-4444-8444-444444444444',organisation_id:org,title:'Engineer',description_rich:{type:'doc',content:[{type:'paragraph'}]},closes_at:null,status:'draft',content_version:2},{id:'55555555-5555-4555-8555-555555555555',organisation_id:other,title:'Other role',description_rich:null,closes_at:null,status:'closed',content_version:1}]};
+ f.identity={profile:{id:'33333333-3333-4333-8333-333333333333',role,organisation_id:role==='customer'?org:null},client:{from(table){const filters={};let columns;const q={select(value){columns=value;if(table==='jobs')f.jobSelections.push(value);if(table==='organisations')f.organisationSelections.push(value);return q;},eq(k,v){filters[k]=v;return q;},async maybeSingle(){f.calls.push({table,filters});if(table==='jobs'){const row=f.jobs.find(j=>j.id===filters.id&&j.organisation_id===filters.organisation_id);return {data:row?Object.fromEntries(columns.split(',').map(k=>[k,row[k]])):null,error:f.jobError};}if(table==='organisations'){const row={id:filters.id,name:'Fixture',careers_slug:filters.id===org?'own-careers':'other-careers',created_at:'not exposed',updated_at:'not exposed'};return {data:Object.fromEntries(columns.split(',').map(k=>k.trim()).map(k=>[k,row[k]])),error:null};}return {data:table==='admin_organisation_assignments'?(f.assigned?{organisation_id:filters.organisation_id}:null):{id:filters.id,name:'Fixture'},error:null};}};return q;}}};
  globalThis[key]=f;return f;
 }
 test('Actual recruitment context derives Customer tenant and rejects A/B spoofing',async()=>{
@@ -75,4 +75,26 @@ test('Job edit loader rejects anonymous/invalid input and hides database error d
  }
  f=setup('customer');f.jobError={message:'private database details'};
  await assert.rejects(getJobForEdit({jobId:ownJob}),{message:'Job is temporarily unavailable.'});
+});
+
+test('Customer Organisation projection includes only its own id, name and careers slug',async()=>{
+ const f=setup('customer');
+ assert.deepEqual((await recruitmentContext()).organisation,{id:org,name:'Fixture',careers_slug:'own-careers'});
+ assert.deepEqual(f.organisationSelections,['id, name, careers_slug']);
+ f.calls=[];f.organisationSelections=[];
+ await assert.rejects(recruitmentContext(other),/not-found/);
+ assert.deepEqual(f.organisationSelections,[]);
+});
+test('Assigned Admin receives managed careers slug; revoked and unassigned access cannot read it',async()=>{
+ const f=setup('admin',true);
+ assert.deepEqual((await recruitmentContext(org)).organisation,{id:org,name:'Fixture',careers_slug:'own-careers'});
+ f.assigned=false;f.organisationSelections=[];
+ await assert.rejects(recruitmentContext(org),/not-found/);
+ await assert.rejects(recruitmentContext(other),/not-found/);
+ assert.deepEqual(f.organisationSelections,[]);
+});
+test('Owner careers slug projection still requires explicit Organisation context',async()=>{
+ const f=setup('platform_owner');await assert.rejects(recruitmentContext(),/not-found/);
+ assert.deepEqual(f.organisationSelections,[]);
+ assert.deepEqual((await recruitmentContext(other)).organisation,{id:other,name:'Fixture',careers_slug:'other-careers'});
 });
