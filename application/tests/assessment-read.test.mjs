@@ -11,7 +11,7 @@ const hook=registerHooks({resolve(s,c,next){let source;if(c.parentURL?.endsWith(
  if(s.startsWith('.')&&c.parentURL?.startsWith('file:')){const u=new URL(s+'.ts',c.parentURL);if(existsSync(u))return {url:u.href,shortCircuit:true};}return next(s,c);
 }});
 const {readAssessmentResult}=await import('../lib/assessment/context.ts');const {ADVISORY_DISCLAIMER}=await import('../lib/assessment/schema.ts');hook.deregister();after(()=>delete globalThis[key]);
-function setup(){const f={cv:{object_id:version},calls:[],denied:false,missingApplication:false,result:{score:80,summary:'Evidence.',strengths:[],gaps:[],recommendation:'strong_match',disclaimer:ADVISORY_DISCLAIMER}};f.context={organisation:{id:org},client:{from(table){const filters={};const q={select(){return q;},eq(k,v){filters[k]=v;return q;},async maybeSingle(){f.calls.push([table,filters]);const data=table==='applications'?(f.missingApplication?null:{id:app,candidate_id:app,job_id:app}):table==='jobs'?{id:app,title:'Engineer',description:null,content_version:7}:table==='candidates'?{id:app}:{cv_object_id:version,assessed_at:'now',result:f.result};return {data,error:null};}};return q;}}};globalThis[key]=f;return f;}
+function setup(){const f={cv:{object_id:version},calls:[],denied:false,missingApplication:false,result:{score:80,summary:'Evidence.',strengths:[],gaps:[],recommendation:'strong_match',disclaimer:ADVISORY_DISCLAIMER}};f.context={organisation:{id:org},client:{from(table){const filters={};const q={select(){return q;},eq(k,v){filters[k]=v;return q;},async maybeSingle(){f.calls.push([table,filters]);const data=table==='applications'?(f.missingApplication?null:{id:app,candidate_id:app,job_id:app,source:f.source??'manual'}):table==='jobs'?{id:app,title:'Engineer',description:null,content_version:7}:table==='candidates'?{id:app}:table==='application_cvs'?(f.applicationCv??{application_id:app,organisation_id:org,object_id:version,storage_path:`${org}/applications/${app}/${version}.pdf`,byte_size:100}):{cv_object_id:version,assessed_at:'now',result:f.result};return {data,error:null};}};return q;}}};globalThis[key]=f;return f;}
 test('Latest assessment reload uses authorised Application and current CV filters, with validated output',async()=>{
  const f=setup();const loaded=await readAssessmentResult({organisationId:org,applicationId:app});assert.deepEqual(loaded.result,f.result);assert.equal(f.requested,org);
  for(const [table,filters] of f.calls)assert.equal(filters.organisation_id,org,table);
@@ -30,4 +30,13 @@ test('AI secrets and native execution stay server-only; no privileged assessment
  assert.doesNotMatch(sources,/SUPABASE_SECRET_KEY|console\.|localStorage|sessionStorage|createSignedUrl|getPublicUrl|shell:\s*true/);
  for(const dir of ['lib/assessment','lib/cv'])for(const f of readdirSync(new URL(dir+'/',root)))assert.doesNotMatch(read(dir+'/'+f),/NEXT_PUBLIC_/);
  assert.match(read('lib/cv/pdf.ts'),/--as=268435456/);assert.match(read('lib/cv/pdf.ts'),/timeout: 8000/);assert.doesNotMatch(read('lib/cv/pdf.ts'),/\.\.\.process.env/);
+});
+
+test('Public assessment loader selects its immutable Application CV, independently of shared Candidate CV',async()=>{
+ const f=setup();f.source='public';f.cv=null;
+ const loaded=await readAssessmentResult({organisationId:org,applicationId:app});assert.deepEqual(loaded.result,f.result);
+ assert.equal(f.calls.some(c=>c[0]==='application_cvs'),true);
+ assert.equal(f.calls.some(c=>c[0]==='candidate_cvs'),false);
+ assert.deepEqual(f.calls.find(c=>c[0]==='application_cvs')[1],{organisation_id:org,application_id:app});
+ f.applicationCv={object_id:version,storage_path:'foreign/path'};await assert.rejects(readAssessmentResult({applicationId:app}),/unavailable/);
 });
