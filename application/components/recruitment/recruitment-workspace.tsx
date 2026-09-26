@@ -1,6 +1,6 @@
 import { readAssessmentResult } from "../../lib/assessment/context";
 import { inspectCurrentCv } from "../../lib/cv/storage";
-import { listCandidates, listJobs, listPipeline } from "../../lib/recruitment/queries";
+import { countActiveJobs, getJobForEdit, listCandidates, listJobs, listPipeline } from "../../lib/recruitment/queries";
 import type { ApplicationStage } from "../../lib/supabase/database.types";
 import { CandidateFilter } from "./candidate-filter";
 import { CandidateCvAssessment } from "./candidate-cv-assessment";
@@ -28,17 +28,30 @@ function firstRelation<T>(value: T | T[] | null): T | null {
 export async function RecruitmentWorkspace({
   organisationId,
   view = "overview",
+  editJobId,
 }: {
   organisationId?: string;
   view?: RecruitmentView;
+  editJobId?: string;
 }) {
   const scope = organisationId ? { organisationId, limit: 100 } : { limit: 100 };
   const actionScope = organisationId ? { organisationId } : {};
-  const [jobs, candidates, rawPipeline] = await Promise.all([
+  const [jobs, candidates, rawPipeline, activeJobs] = await Promise.all([
     listJobs(scope),
     listCandidates(scope),
     listPipeline(scope),
+    countActiveJobs(scope),
   ]);
+
+  const validEditJobId =
+    view === "jobs" &&
+    !!editJobId &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(editJobId)
+      ? editJobId
+      : undefined;
+  const editJob = validEditJobId
+    ? await getJobForEdit({ ...actionScope, jobId: validEditJobId })
+    : null;
 
   const pipeline = (rawPipeline as PipelineJoin[]).flatMap((row) => {
     const candidate = firstRelation(row.candidate);
@@ -62,7 +75,7 @@ export async function RecruitmentWorkspace({
   const stats = (
     <section className="grid gap-4 sm:grid-cols-3">
       {[
-        ["Active jobs", String(jobs.length), "Roles in this workspace"],
+        ["Active jobs", String(activeJobs), "Published roles currently accepting applications"],
         ["Candidates", String(candidates.length), "People in your talent pool"],
         ["Applications", String(pipeline.length), `${representedJobs} job${representedJobs === 1 ? "" : "s"} represented`],
       ].map(([label, value, caption]) => (
@@ -92,31 +105,37 @@ export async function RecruitmentWorkspace({
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Jobs</p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">Open roles</h2>
-            <p className="mt-1 text-sm text-muted">Create and review roles available in this workspace.</p>
+            <h2 className="text-lg font-semibold">Jobs</h2>
+            <p className="mt-1 text-sm text-muted">Create, publish and manage roles for this organisation.</p>
           </div>
-          <JobEditorLauncher />
+          <JobEditorLauncher
+            key={editJob?.id ?? "new-job"}
+            organisationId={organisationId}
+            initialJob={editJob ? {
+              id: editJob.id,
+              title: editJob.title,
+              descriptionRich: editJob.description_rich,
+              closesAt: editJob.closes_at,
+              status: editJob.status as "draft" | "published",
+              contentVersion: editJob.content_version,
+            } : null}
+          />
         </div>
       </div>
       {jobs.length ? (
         <div className="grid gap-4 bg-[#f8f9fb] p-4 sm:p-5">
           {jobs.map((job) => {
-            const futureJob = job as typeof job & {
-              status?: "draft" | "published" | "closed" | "archived";
-              closes_at?: string | null;
-              teaser?: string | null;
-              public_id?: string | null;
-            };
             const applicationCount = pipeline.filter((application) => application.jobId === job.id).length;
             return (
               <JobManagementCard
                 key={job.id}
+                organisationId={organisationId}
+                jobId={job.id}
                 title={job.title}
-                description={futureJob.teaser || job.description}
-                status={futureJob.status ?? "draft"}
-                closesAt={futureJob.closes_at ?? null}
+                description={job.teaser || job.description}
+                status={job.status}
+                closesAt={job.closes_at}
                 applicationCount={applicationCount}
-                publicUrl={null}
               />
             );
           })}

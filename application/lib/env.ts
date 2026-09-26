@@ -4,7 +4,13 @@ import { z } from "zod";
 const environmentSchema = z.object({
   SUPABASE_URL: z.url().refine((value) => {
     const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && url.pathname === "/" && !url.search && !url.hash;
+    const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    return (url.protocol === "https:" || (local && url.protocol === "http:")) &&
+      !url.username &&
+      !url.password &&
+      url.pathname === "/" &&
+      !url.search &&
+      !url.hash;
   }),
   // Only the new publishable key format is accepted. Privileged keys fail closed.
   SUPABASE_PUBLISHABLE_KEY: z.string().regex(/^sb_publishable_[A-Za-z0-9_-]+$/),

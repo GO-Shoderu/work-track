@@ -21,7 +21,7 @@ const actions=await import('../lib/recruitment/actions.ts');
 const queries=await import('../lib/recruitment/queries.ts');
 hooks.deregister();after(()=>delete globalThis[key]);
 function setup(){const f={origin:'http://localhost:3000',org,calls:[],denied:false,error:null,data:{id}};
- f.client={async rpc(name,args){f.calls.push(['rpc',name,args]);return {data:f.data?.id??null,error:f.error};},from(t){f.calls.push(['from',t]);const q={then(resolve,reject){return Promise.resolve({data:f.data,error:f.error}).then(resolve,reject);},maybeSingle(){return Promise.resolve({data:f.data,error:f.error});},single(){return Promise.resolve({data:f.data,error:f.error});}};for(const op of ['insert','update','select','eq','is','ilike','order','range'])q[op]=(...args)=>{f.calls.push([op,...args]);return q;};return q;}};globalThis[key]=f;return f;}
+ f.client={async rpc(name,args){f.calls.push(['rpc',name,args]);return {data:f.data?.id??null,error:f.error};},from(t){f.calls.push(['from',t]);const q={then(resolve,reject){return Promise.resolve({data:f.data,error:f.error}).then(resolve,reject);},maybeSingle(){return Promise.resolve({data:f.data,error:f.error});},single(){return Promise.resolve({data:f.data,error:f.error});}};for(const op of ['insert','update','select','eq','is','ilike','or','order','range'])q[op]=(...args)=>{f.calls.push([op,...args]);return q;};return q;}};globalThis[key]=f;return f;}
 test('Recruitment validation: required names, bounded fields, optional contact data and exact stages',()=>{
  assert.equal(jobSchema.parse({title:' Engineer '}).title,'Engineer');
  assert.equal(candidateSchema.parse({fullName:' Jane ',email:' ',phone:null}).email,null);

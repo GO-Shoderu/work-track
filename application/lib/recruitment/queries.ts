@@ -26,6 +26,23 @@ export async function getJobForEdit(input: unknown) {
     return data;
   } catch { throw new Error("Job is temporarily unavailable."); }
 }
+export async function countActiveJobs(input: unknown = {}) {
+  const parsed = listSchema.safeParse(input); if (!parsed.success) throw new Error("Invalid list parameters.");
+  const { client, organisation } = await recruitmentContext(parsed.data.organisationId);
+  try {
+    const { count, error } = await client
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("organisation_id", organisation.id)
+      .eq("status", "published")
+      .or("closes_at.is.null,closes_at.gt.now");
+    if (error) throw error;
+    return count ?? 0;
+  } catch {
+    throw new Error("Active Jobs are temporarily unavailable.");
+  }
+}
+
 export async function listCandidates(input: unknown = {}) {
   const parsed = listSchema.safeParse(input); if (!parsed.success) throw new Error("Invalid list parameters.");
   const { client, organisation } = await recruitmentContext(parsed.data.organisationId);
