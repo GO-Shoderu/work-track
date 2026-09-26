@@ -15,7 +15,8 @@ export type Application = { id: string; organisation_id: string; candidate_id: s
 export type Database = {
   public: {
     Tables: {
-      candidate_assessments: { Row: { application_id: string; organisation_id: string; cv_object_id: string; job_content_version: number; result: unknown; assessed_at: string }; Insert: never; Update: never; Relationships: [] };
+      application_cvs: { Row: { application_id: string; organisation_id: string; job_id: string; normalized_email: string; submitted_full_name: string; submitted_phone: string | null; submitted_linkedin_url: string | null; object_id: string; byte_size: number; storage_path: string; created_at: string }; Insert: never; Update: never; Relationships: [] };
+      candidate_assessments: { Row: { application_id: string; organisation_id: string; cv_object_id: string; job_content_version: number; cv_source: "candidate" | "application"; result: unknown; assessed_at: string }; Insert: never; Update: never; Relationships: [] };
       candidate_cvs: { Row: { candidate_id: string; organisation_id: string; object_id: string; storage_path: string; byte_size: number; updated_at: string }; Insert: { candidate_id: string; organisation_id: string; object_id: string; byte_size: number }; Update: { object_id: string; byte_size: number }; Relationships: [] };
       jobs: { Row: Job; Insert: never; Update: never; Relationships: [] };
       candidates: { Row: Candidate; Insert: Pick<Candidate, "organisation_id" | "full_name"> & Partial<Pick<Candidate, "email" | "phone" | "linkedin_url">>; Update: never; Relationships: [] };
@@ -29,6 +30,11 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      prepare_public_application: { Args: { target_slug: string; target_public_id: string; applicant_email: string; cv_bytes: number }; Returns: unknown };
+      complete_public_application: { Args: { upload_id: string; full_name: string; applicant_email: string; phone: string | null; linkedin_url: string | null }; Returns: unknown };
+      finish_public_assessment: { Args: { target_application_id: string; target_cv_object_id: string; target_job_content_version: number; validated_result: unknown }; Returns: string };
+      read_public_careers: { Args: { target_slug: string; page_offset: number; page_size: number }; Returns: unknown };
+      read_public_job: { Args: { target_slug: string; target_public_id: string }; Returns: unknown };
       save_job_content: { Args: { target_organisation_id: string; target_job_id: string | null; job_title: string; job_document: unknown; job_closes_at: string | null; expected_content_version: number | null; draft_only: boolean }; Returns: string };
       transition_job: { Args: { target_organisation_id: string; target_job_id: string; next_status: JobStatus }; Returns: string };
       save_candidate_assessment: { Args: { target_application_id: string; target_cv_object_id: string; target_job_content_version: number; validated_result: unknown }; Returns: string };

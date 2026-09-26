@@ -4,6 +4,7 @@ import { getEnvironment } from "../env";
 import { assessmentContext } from "./context";
 import { requireAssessmentProvider, assessWithProvider } from "./provider";
 import { assessmentResultSchema } from "./schema";
+import { downloadApplicationCv } from "../cv/application";
 import { downloadCurrentCv } from "../cv/storage";
 import { extractPdfText } from "../cv/pdf";
 
@@ -13,7 +14,9 @@ export async function requestJobCvAssessment(input: unknown) {
   const context = await assessmentContext(input);
   try { requireAssessmentProvider(); } catch { return { ok: false, error: "AI assessment is not configured. Contact your administrator." } as const; }
   try {
-    const { bytes, version } = await downloadCurrentCv(context, context.application.candidate_id);
+    const { bytes, version } = context.application.source === "public"
+      ? await downloadApplicationCv(context, context.application.id)
+      : await downloadCurrentCv(context, context.application.candidate_id);
     const text = await extractPdfText(bytes);
     const result = assessmentResultSchema.parse(await assessWithProvider(context.job, text));
     // Authenticated RPC rechecks actor role, current assignment, Job content and CV versions

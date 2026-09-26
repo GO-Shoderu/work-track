@@ -1,13 +1,14 @@
 import "server-only";
 import { recruitmentContext } from "../recruitment/context";
 import { assessmentRequestSchema, assessmentResultSchema } from "./schema";
+import { applicationCv, downloadApplicationCv } from "../cv/application";
 import { currentCv } from "../cv/storage";
 
 export async function assessmentContext(input: unknown) {
   const parsed = assessmentRequestSchema.safeParse(input);
   if (!parsed.success) throw new Error("Invalid Application details.");
   const context = await recruitmentContext(parsed.data.organisationId);
-  const { data: application, error } = await context.client.from("applications").select("id,candidate_id,job_id,organisation_id")
+  const { data: application, error } = await context.client.from("applications").select("id,candidate_id,job_id,organisation_id,source")
     .eq("organisation_id", context.organisation.id).eq("id", parsed.data.applicationId).maybeSingle();
   if (error || !application) throw new Error("Application is unavailable.");
   const { data: job, error: jobError } = await context.client.from("jobs").select("id,title,description,content_version")
@@ -19,7 +20,9 @@ export async function assessmentContext(input: unknown) {
 }
 export async function readAssessmentResult(input: unknown) {
   const context = await assessmentContext(input);
-  const cv = await currentCv(context, context.application.candidate_id);
+  const cv = context.application.source === "public"
+    ? await applicationCv(context, context.application.id)
+    : await currentCv(context, context.application.candidate_id);
   if (!cv) return null;
   const { data, error } = await context.client.from("candidate_assessments").select("result,cv_object_id,job_content_version,assessed_at")
     .eq("organisation_id", context.organisation.id).eq("application_id", context.application.id).eq("cv_object_id", cv.object_id).eq("job_content_version", context.job.content_version).maybeSingle();
@@ -28,4 +31,11 @@ export async function readAssessmentResult(input: unknown) {
   const parsed = assessmentResultSchema.safeParse(data.result);
   if (!parsed.success) throw new Error("Assessment is unavailable.");
   return { applicationId: context.application.id, cvVersion: cv.object_id, assessedAt: data.assessed_at, result: parsed.data };
+}
+
+// Authenticated tenant/assignment checks run before reading any public-upload CV.
+export async function readApplicationCv(input: unknown) {
+  const context = await assessmentContext(input);
+  if (context.application.source !== "public") throw new Error("Application CV is unavailable.");
+  return downloadApplicationCv(context, context.application.id);
 }

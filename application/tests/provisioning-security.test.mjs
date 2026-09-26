@@ -52,7 +52,7 @@ test("Privileged key references are restricted to server-only runtime modules", 
       assert.match(source, /import "server-only"/);
     }
   }
-  assert.deepEqual(references.sort(), ["lib/env.ts", "lib/supabase/admin.ts"]);
+  assert.deepEqual(references.sort(), ["lib/env.ts", "lib/public-recruitment/service.ts", "lib/supabase/admin.ts"]);
 });
 
 test("Credential panel clears its in-memory result and never resubmits or persists the password", () => {
