@@ -15,10 +15,13 @@ const hooks=registerHooks({resolve(s,c,next){
  return next(s,c);
 }});
 const {recruitmentContext}=await import('../lib/recruitment/context.ts');
+// Separate module instance keeps this real-context loader test independent of the
+// action/query SDK-boundary mocks in recruitment.test.mjs.
+const {getJobForEdit}=await import('../lib/recruitment/queries.ts?edit-loader');
 hooks.deregister();after(()=>delete globalThis[key]);
 function setup(role,assigned=false){
- const f={assigned,calls:[],anonymous:false};
- f.identity={profile:{id:'33333333-3333-4333-8333-333333333333',role,organisation_id:role==='customer'?org:null},client:{from(table){const filters={};const q={select(){return q;},eq(k,v){filters[k]=v;return q;},async maybeSingle(){f.calls.push({table,filters});return {data:table==='admin_organisation_assignments'?(f.assigned?{organisation_id:filters.organisation_id}:null):{id:filters.id,name:'Fixture'},error:null};}};return q;}}};
+ const f={assigned,calls:[],anonymous:false,jobSelections:[],jobError:null,jobs:[{id:'44444444-4444-4444-8444-444444444444',organisation_id:org,title:'Engineer',description_rich:{type:'doc',content:[{type:'paragraph'}]},closes_at:null,status:'draft',content_version:2},{id:'55555555-5555-4555-8555-555555555555',organisation_id:other,title:'Other role',description_rich:null,closes_at:null,status:'closed',content_version:1}]};
+ f.identity={profile:{id:'33333333-3333-4333-8333-333333333333',role,organisation_id:role==='customer'?org:null},client:{from(table){const filters={};let columns;const q={select(value){columns=value;if(table==='jobs')f.jobSelections.push(value);return q;},eq(k,v){filters[k]=v;return q;},async maybeSingle(){f.calls.push({table,filters});if(table==='jobs'){const row=f.jobs.find(j=>j.id===filters.id&&j.organisation_id===filters.organisation_id);return {data:row?Object.fromEntries(columns.split(',').map(k=>[k,row[k]])):null,error:f.jobError};}return {data:table==='admin_organisation_assignments'?(f.assigned?{organisation_id:filters.organisation_id}:null):{id:filters.id,name:'Fixture'},error:null};}};return q;}}};
  globalThis[key]=f;return f;
 }
 test('Actual recruitment context derives Customer tenant and rejects A/B spoofing',async()=>{
@@ -35,4 +38,41 @@ test('Owner must supply valid explicit context; anonymous and invalid context de
  const f=setup('platform_owner');for(const id of [org,other])assert.equal((await recruitmentContext(id)).organisation.id,id);
  await assert.rejects(recruitmentContext(),/not-found/);await assert.rejects(recruitmentContext('invalid'),/not-found/);
  f.anonymous=true;await assert.rejects(recruitmentContext(org),/login/);
+});
+
+const ownJob='44444444-4444-4444-8444-444444444444';
+const foreignJob='55555555-5555-4555-8555-555555555555';
+test('Job edit loader derives Customer tenant and returns exactly the six edit fields',async()=>{
+ const f=setup('customer');const result=await getJobForEdit({jobId:ownJob});
+ assert.deepEqual(result,{id:ownJob,title:'Engineer',description_rich:{type:'doc',content:[{type:'paragraph'}]},closes_at:null,status:'draft',content_version:2});
+ assert.deepEqual(f.jobSelections,['id,title,description_rich,closes_at,status,content_version']);
+ assert.deepEqual(f.calls.find(c=>c.table==='jobs').filters,{organisation_id:org,id:ownJob});
+});
+test('Job edit loader denies Customer cross-tenant context and cannot retrieve a foreign Job by ID',async()=>{
+ const f=setup('customer');await assert.rejects(getJobForEdit({organisationId:other,jobId:foreignJob}),/not-found/);
+ assert.equal(f.calls.length,0);
+ assert.equal(await getJobForEdit({jobId:foreignJob}),null);
+ assert.deepEqual(f.calls.find(c=>c.table==='jobs').filters,{organisation_id:org,id:foreignJob});
+});
+test('Job edit loader allows assigned Admin then denies revoked and unassigned Organisation access',async()=>{
+ const f=setup('admin',true);assert.equal((await getJobForEdit({organisationId:org,jobId:ownJob})).id,ownJob);
+ assert.deepEqual(f.calls[0],{table:'admin_organisation_assignments',filters:{admin_id:f.identity.profile.id,organisation_id:org}});
+ f.assigned=false;f.calls=[];
+ await assert.rejects(getJobForEdit({organisationId:org,jobId:ownJob}),/not-found/);
+ await assert.rejects(getJobForEdit({organisationId:other,jobId:foreignJob}),/not-found/);
+ assert.equal(f.calls.some(c=>c.table==='jobs'),false);
+});
+test('Job edit loader requires explicit Owner context and allows both authorised Organisation contexts',async()=>{
+ const f=setup('platform_owner');await assert.rejects(getJobForEdit({jobId:ownJob}),/not-found/);assert.equal(f.calls.length,0);
+ assert.equal((await getJobForEdit({organisationId:org,jobId:ownJob})).id,ownJob);
+ assert.equal((await getJobForEdit({organisationId:other,jobId:foreignJob})).id,foreignJob);
+ assert.equal(await getJobForEdit({organisationId:org,jobId:foreignJob}),null);
+});
+test('Job edit loader rejects anonymous/invalid input and hides database error details',async()=>{
+ let f=setup('customer');f.anonymous=true;await assert.rejects(getJobForEdit({jobId:ownJob}),/login/);assert.equal(f.calls.length,0);
+ for(const input of [{jobId:'invalid'},{jobId:ownJob,organisationId:'bad'},{jobId:ownJob,role:'platform_owner'},{}]){
+  f=setup('customer');await assert.rejects(getJobForEdit(input),/Invalid Job details/);assert.equal(f.calls.length,0);
+ }
+ f=setup('customer');f.jobError={message:'private database details'};
+ await assert.rejects(getJobForEdit({jobId:ownJob}),{message:'Job is temporarily unavailable.'});
 });

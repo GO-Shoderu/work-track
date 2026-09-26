@@ -21,7 +21,7 @@ const actions=await import('../lib/recruitment/actions.ts');
 const queries=await import('../lib/recruitment/queries.ts');
 hooks.deregister();after(()=>delete globalThis[key]);
 function setup(){const f={origin:'http://localhost:3000',org,calls:[],denied:false,error:null,data:{id}};
- f.client={from(t){f.calls.push(['from',t]);const q={then(resolve,reject){return Promise.resolve({data:f.data,error:f.error}).then(resolve,reject);},single(){return Promise.resolve({data:f.data,error:f.error});}};for(const op of ['insert','update','select','eq','is','ilike','order','range'])q[op]=(...args)=>{f.calls.push([op,...args]);return q;};return q;}};globalThis[key]=f;return f;}
+ f.client={async rpc(name,args){f.calls.push(['rpc',name,args]);return {data:f.data?.id??null,error:f.error};},from(t){f.calls.push(['from',t]);const q={then(resolve,reject){return Promise.resolve({data:f.data,error:f.error}).then(resolve,reject);},maybeSingle(){return Promise.resolve({data:f.data,error:f.error});},single(){return Promise.resolve({data:f.data,error:f.error});}};for(const op of ['insert','update','select','eq','is','ilike','order','range'])q[op]=(...args)=>{f.calls.push([op,...args]);return q;};return q;}};globalThis[key]=f;return f;}
 test('Recruitment validation: required names, bounded fields, optional contact data and exact stages',()=>{
  assert.equal(jobSchema.parse({title:' Engineer '}).title,'Engineer');
  assert.equal(candidateSchema.parse({fullName:' Jane ',email:' ',phone:null}).email,null);
@@ -41,7 +41,7 @@ test('Server Actions reject invalid input and foreign origins before database ac
 });
 test('Job and Candidate creation use verified Organisation and normal client with no Auth identity',async()=>{
  let f=setup();assert.equal((await actions.createJob({organisationId:other,title:' Engineer '})).ok,true);
- assert.deepEqual(f.calls.find(c=>c[0]==='insert')[1],{organisation_id:org,title:'Engineer',description:null});
+ assert.deepEqual(f.calls.find(c=>c[0]==='rpc'),['rpc','save_job_content',{target_organisation_id:org,target_job_id:null,job_title:'Engineer',job_document:{type:'doc',content:[{type:'paragraph'}]},job_closes_at:null,expected_content_version:null,draft_only:true}]);
  f=setup();await actions.createCandidate({fullName:'Jane',linkedinUrl:'https://linkedin.com/in/jane'});
  assert.deepEqual(f.calls.find(c=>c[0]==='insert')[1],{organisation_id:org,full_name:'Jane',email:null,phone:null,linkedin_url:'https://linkedin.com/in/jane'});
 });
@@ -63,7 +63,7 @@ test('Pipeline combines literal name, Job, stage and tenant filters before deter
  assert.match(f.calls.find(c=>c[0]==='select')[1],/candidates!applications_candidate_fkey!inner/);
 });
 test('All loaders scope reads and authorization denial happens before reads/writes',async()=>{
- for(const fn of Object.values(queries)){const f=setup();await fn();assert.ok(f.calls.some(c=>c[0]==='eq'&&c[1]==='organisation_id'&&c[2]===org));}
+ for(const [name,fn] of Object.entries(queries)){const f=setup();await fn(name==='getJobForEdit'?{jobId:id}:undefined);assert.ok(f.calls.some(c=>c[0]==='eq'&&c[1]==='organisation_id'&&c[2]===org));}
  const f=setup();f.denied=true;await assert.rejects(actions.createJob({title:'Job'}),/denied/);assert.equal(f.calls.some(c=>c[0]==='from'),false);
 });
 test('Migration security contract: RLS, composite FKs, duplicate constraint and least column privileges',()=>{
@@ -73,4 +73,43 @@ test('Migration security contract: RLS, composite FKs, duplicate constraint and 
  assert.match(sql,/foreign key \(organisation_id,candidate_id\)/);assert.match(sql,/foreign key \(organisation_id,job_id\)/);
  assert.match(sql,/unique \(candidate_id,job_id\)/);assert.match(sql,/grant update \(stage\)/);
  assert.doesNotMatch(sql,/grant (all|delete|truncate)|disable row level security|security definer/i);
+});
+
+test('Job list exposes lifecycle metadata while retaining tenant scope and pagination',async()=>{
+ const f=setup();await queries.listJobs({offset:10,limit:5});
+ const fields=f.calls.find(c=>c[0]==='select')[1].split(',');
+ for(const name of ['id','organisation_id','title','description','created_at','status','public_id','closes_at','teaser','published_at','closed_at','content_version'])assert.ok(fields.includes(name));
+ assert.ok(f.calls.some(c=>c[0]==='range'&&c[1]===10&&c[2]===14));
+});
+const doc={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Build reliable recruitment software.'}]}]};
+test('Job content actions use actor RPC and trusted Organisation; no derived-text input is sent',async()=>{
+ for(const [fn,mode] of [[actions.createJobDraft,'create'],[actions.saveJobDraft,'draft'],[actions.editJob,'edit']]){
+  const f=setup();const result=await fn({organisationId:other,title:' Engineer ',descriptionRich:doc,closesAt:null,...(mode==='create'?{}:{jobId:id,contentVersion:2})});
+  assert.equal(result.ok,true);
+  assert.deepEqual(f.calls.find(c=>c[0]==='rpc'),['rpc','save_job_content',{target_organisation_id:org,target_job_id:mode==='create'?null:id,job_title:'Engineer',job_document:doc,job_closes_at:null,expected_content_version:mode==='create'?null:2,draft_only:mode!=='edit'}]);
+  assert.equal(f.calls.some(c=>c[0]==='from'),false);
+ }
+});
+test('Job actions reject forged plain text, wrong shapes, invalid versions/dates before database access',async()=>{
+ for(const extra of [{description:'forged'},{descriptionRich:{type:'html',html:'<script>'}},{closesAt:'2020-01-01T00:00:00Z'},{closesAt:'tomorrow'},{status:'published'},{teaser:'forged'}]){
+  const f=setup();assert.equal((await actions.createJobDraft({title:'Engineer',descriptionRich:doc,...extra})).ok,false);assert.deepEqual(f.calls,[]);
+ }
+ const f=setup();assert.equal((await actions.editJob({title:'Engineer',descriptionRich:doc,jobId:id,contentVersion:0})).ok,false);assert.deepEqual(f.calls,[]);
+});
+test('Lifecycle actions constrain transition and reject browser overrides',async()=>{
+ for(const [fn,status] of [[actions.publishJob,'published'],[actions.closeJob,'closed'],[actions.archiveJob,'archived']]){
+  let f=setup();assert.equal((await fn({jobId:id})).ok,true);
+  assert.deepEqual(f.calls.find(c=>c[0]==='rpc'),['rpc','transition_job',{target_organisation_id:org,target_job_id:id,next_status:status}]);
+  f=setup();assert.equal((await fn({jobId:id,status:'draft'})).ok,false);assert.deepEqual(f.calls,[]);
+ }
+});
+test('Job mutation authorization, concurrent edits, invalid transitions and uncertain responses fail safely',async()=>{
+ for(const fn of [actions.createJobDraft,actions.saveJobDraft,actions.editJob,actions.publishJob,actions.closeJob,actions.archiveJob]){
+  const f=setup();f.denied=true;await assert.rejects(fn(fn===actions.createJobDraft?{title:'Engineer',descriptionRich:doc}:fn===actions.editJob||fn===actions.saveJobDraft?{title:'Engineer',descriptionRich:doc,jobId:id,contentVersion:1}:{jobId:id}),/denied/);
+  assert.equal(f.calls.some(c=>c[0]==='rpc'),false);
+ }
+ for(const code of ['42501','22023','40001','XX000']){
+  const f=setup();f.error={code,message:'private internal SQL'};const result=await actions.editJob({title:'Engineer',descriptionRich:doc,jobId:id,contentVersion:1});assert.equal(result.ok,false);assert.doesNotMatch(result.error,/private internal/);
+ }
+ const f=setup();f.data=null;assert.equal((await actions.publishJob({jobId:id})).ok,false);
 });

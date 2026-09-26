@@ -2,6 +2,7 @@
 import { headers } from "next/headers";
 import { getEnvironment } from "../env";
 import { recruitmentContext } from "./context";
+import { createJobDraftSchema, saveJobContentSchema, jobLifecycleSchema } from "../validation/job-content";
 import { jobSchema, candidateSchema, applicationSchema, stageSchema } from "../validation/recruitment";
 
 export type MutationResult = { ok: true; id: string } | { ok: false; error: string };
@@ -15,15 +16,54 @@ function outcome(data: { id: string } | null, error: { code?: string } | null): 
   if (error?.code === "23505") return { ok: false, error: "This Candidate already has an Application for this Job." };
   return !error && data ? { ok: true, id: data.id } : unavailable;
 }
+// Retain the existing plain-text form as an adapter: it becomes document input,
+// never a trusted derived-description field. The RPC derives all persisted text.
 export async function createJob(input: unknown): Promise<MutationResult> {
   if (!(await allowedOrigin())) return invalid;
   const parsed = jobSchema.safeParse(input); if (!parsed.success) return invalid;
-  const { client, organisation } = await recruitmentContext(parsed.data.organisationId);
+  return createJobDraft({
+    organisationId: parsed.data.organisationId, title: parsed.data.title,
+    descriptionRich: { type: "doc", content: [{ type: "paragraph", ...(parsed.data.description ? { content: [{ type: "text", text: parsed.data.description }] } : {}) }] },
+  });
+}
+async function saveContent(input: unknown, mode: "create" | "draft" | "edit"): Promise<MutationResult> {
+  if (!(await allowedOrigin())) return invalid;
+  const parsed = mode === "create" ? createJobDraftSchema.safeParse(input) : saveJobContentSchema.safeParse(input);
+  if (!parsed.success) return invalid;
+  const content = parsed.data;
+  const { client, organisation } = await recruitmentContext(content.organisationId);
   try {
-    const { data, error } = await client.from("jobs").insert({ organisation_id: organisation.id, title: parsed.data.title, description: parsed.data.description }).select("id").single();
-    return outcome(data, error);
+    const { data, error } = await client.rpc("save_job_content", {
+      target_organisation_id: organisation.id,
+      target_job_id: "jobId" in content && typeof content.jobId === "string" ? content.jobId : null,
+      job_title: content.title, job_document: content.descriptionRich,
+      job_closes_at: content.closesAt,
+      expected_content_version: "contentVersion" in content && typeof content.contentVersion === "number" ? content.contentVersion : null,
+      draft_only: mode !== "edit",
+    });
+    if (error?.code === "40001") return { ok: false, error: "This Job changed. Reload it before saving." };
+    if (error?.code === "22023") return { ok: false, error: "Check the Job content, closing date and current status." };
+    return !error && data ? { ok: true, id: data } : unavailable;
   } catch { return unavailable; }
 }
+export async function createJobDraft(input: unknown): Promise<MutationResult> { return saveContent(input, "create"); }
+export async function saveJobDraft(input: unknown): Promise<MutationResult> { return saveContent(input, "draft"); }
+export async function editJob(input: unknown): Promise<MutationResult> { return saveContent(input, "edit"); }
+async function changeJobStatus(input: unknown, status: "published" | "closed" | "archived"): Promise<MutationResult> {
+  if (!(await allowedOrigin())) return invalid;
+  const parsed = jobLifecycleSchema.safeParse(input); if (!parsed.success) return invalid;
+  const { client, organisation } = await recruitmentContext(parsed.data.organisationId);
+  try {
+    const { data, error } = await client.rpc("transition_job", {
+      target_organisation_id: organisation.id, target_job_id: parsed.data.jobId, next_status: status,
+    });
+    if (error?.code === "22023") return { ok: false, error: "Check the Job content, closing date and current status." };
+    return !error && data === parsed.data.jobId ? { ok: true, id: data } : unavailable;
+  } catch { return unavailable; }
+}
+export async function publishJob(input: unknown): Promise<MutationResult> { return changeJobStatus(input, "published"); }
+export async function closeJob(input: unknown): Promise<MutationResult> { return changeJobStatus(input, "closed"); }
+export async function archiveJob(input: unknown): Promise<MutationResult> { return changeJobStatus(input, "archived"); }
 export async function createCandidate(input: unknown): Promise<MutationResult> {
   if (!(await allowedOrigin())) return invalid;
   const parsed = candidateSchema.safeParse(input); if (!parsed.success) return invalid;
