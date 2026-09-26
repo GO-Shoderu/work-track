@@ -14,6 +14,11 @@ function cvHref(applicationId: string, organisationId?: string) {
   const base = `/api/recruitment/applications/${encodeURIComponent(applicationId)}/cv`;
   return organisationId ? `${base}?organisationId=${encodeURIComponent(organisationId)}` : base;
 }
+
+function candidateProfileCvHref(candidateId: string, organisationId?: string) {
+  const base = `/api/recruitment/candidates/${encodeURIComponent(candidateId)}/cv`;
+  return organisationId ? `${base}?organisationId=${encodeURIComponent(organisationId)}` : base;
+}
 function recommendationLabel(value: Assessment["result"]["recommendation"]) {
   if (value === "strong_match") return "Strong match";
   if (value === "potential_match") return "Potential match";
@@ -37,6 +42,16 @@ export function CandidateCvAssessment({ organisationId, candidateId, cv, applica
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Candidate profile CV</p>
             <p className="mt-1 text-sm font-medium">{cv ? `${cv.fileName} · ${Math.max(1, Math.round(cv.byteSize / 1024))} KB` : "No profile CV uploaded"}</p>
             <p className="mt-1 text-xs text-muted">Recruiter-managed CV for this Candidate profile.</p>
+            {cv && (
+              <a
+                href={candidateProfileCvHref(candidateId, organisationId)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex rounded-lg border border-border bg-white px-3.5 py-2 text-xs font-semibold transition hover:border-gray-300"
+              >
+                View profile CV
+              </a>
+            )}
           </div>
           <form className="flex flex-wrap items-center gap-2" onSubmit={(event) => {
             event.preventDefault(); const formElement = event.currentTarget; const formData = new FormData(formElement); setMessage(null);
